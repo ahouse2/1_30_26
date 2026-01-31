@@ -1,0 +1,43 @@
+name: Docker E2E Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start services
+        run: |
+          docker-compose down -v || true
+          docker-compose up -d --build
+      - name: Wait for services to be healthy
+        run: |
+          bash scripts/wait-for-docker-compose.sh 240
+      - name: Install Node.js and dependencies for E2E
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: |
+          npm install -D @playwright/test
+          npx playwright install --with-deps
+      - name: Run E2E tests
+        working-directory: ./frontend
+        run: |
+          npm ci --ignore-scripts
+          npm run test:e2e
+      - name: Teardown
+        if: always()
+        run: |
+          docker-compose down -v

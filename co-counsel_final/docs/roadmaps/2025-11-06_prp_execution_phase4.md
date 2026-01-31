@@ -1,0 +1,98 @@
+# PRP Execution Run — Phase 4 Forensics Core
+
+- ## Vision: Materialise the multi-modality forensics toolbox with deterministic orchestration, artefact persistence, and API/telemetry exposure that meet PRP Phase 4 exit criteria.
+  - ### Objectives
+    - #### O1: Ship canonicalised toolbox orchestration with strict stage ordering and report schema guarantees.
+      - ##### Outcomes
+        - Orchestrator enforces `canonicalise → metadata → analyse` sequencing with audit trail persisted per artefact.
+        - Storage layout standardises on `report.json` with semantic versioning and change manifest.
+        - CLI enables reproducible report regeneration on demand (`python -m backend.tools.forensics dump --id <doc>`).
+    - #### O2: Deliver modality-specific analyzers for documents, imagery, and ledgers that fulfil spec requirements.
+      - ##### Outcomes
+        - Document analyzers compute SHA-256/TLSH, harvest metadata for PDF/DOCX/MSG, and emit authenticity signals (TOC gaps, signature checks, entropy scores).
+        - Image analyzers extract EXIF, run ELA + clone/PRNU heuristics, and provide fallback states for low-fidelity samples.
+        - Financial analyzers reconcile ledger totals with Decimal precision, detect anomalies via Isolation Forest + z-score fallback, and summarise entities/metrics.
+    - #### O3: Wire forensics outputs through ingestion status, `/forensics/*` APIs, and `/query` traces.
+      - ##### Outcomes
+        - Job manifests capture per-artifact timestamps, schema versions, and storage URIs.
+        - FastAPI responses emit summary + signals + raw artefact payload, enforcing guardrails when analyzers unavailable.
+        - Retrieval traces expose linked forensics reports to satisfy traceability specification.
+    - #### O4: Establish verification harness and observability collateral.
+      - ##### Outcomes
+        - Pytest coverage for orchestration order, modality analyzers, guardrails, and API contracts.
+        - Build log documents datasets, hashes, CLI demonstration, and coverage notes.
+        - ACE memory updated with execution capsule.
+
+- ## Decision Tree Snapshot
+  - ### Orchestration Framework
+    - #### Option A: Expand current monolithic `ForensicsService` methods incrementally (rejected — hard to enforce stage order & schema drift).
+    - #### Option B: Introduce pipeline abstractions with pluggable analyzers (**selected** for determinism and future extension).
+    - #### Option C: External workflow engine (deferred — overkill for current scope).
+  - ### Document Authenticity Stack
+    - #### Option A: Depend solely on built-in text heuristics (rejected — insufficient for spec metadata coverage).
+    - #### Option B: Blend specialised libraries (`pypdf`, `python-docx`, `extract-msg`, `tlsh`, `python-magic`, `pikepdf`, `mailparser`) with defensive fallbacks plus bespoke structural heuristics (**selected** for accuracy + reproducibility while remaining compatible with sandbox constraints).
+    - #### Option C: Outsource to external SaaS (rejected — violates offline execution guarantees).
+  - ### Image Tamper Detection
+    - #### Option A: Retain simple block hash clone detection (rejected — lacks PRP metrics like PRNU/ELA stats).
+    - #### Option B: Layer `Pillow`+`numpy`+`opencv` analyzers with PRNU-inspired residual heuristics and fallback thresholds (**selected** to satisfy modality coverage without external GPU requirements).
+    - #### Option C: GPU-accelerated deepfake model (postponed — compute/time constraints for CI).
+  - ### Financial Anomaly Detection
+    - #### Option A: Summation-only checks (rejected — fails anomaly deliverable).
+    - #### Option B: IsolationForest with Decimal reconciliation + z-score fallback (**selected** balancing rigour and determinism).
+    - #### Option C: Streaming Spark job (deferred — not required for test corpus).
+
+- ## Execution Ladder
+  - ### Stage Alpha — Pipeline & Schema Foundation
+    - Refactor `ForensicsService` into pipeline components (context dataclass, stage enums, analyzer base classes).
+    - Persist `report.json` with `schema_version`, `stages`, `summary`, `signals`, and modality payloads.
+    - Update ingestion status tracking to capture stage timestamps + artefact URIs.
+  - ### Stage Beta — Document Analyzer Suite
+    - Implement canonicalisation (copy to storage, normalise newline encoding) and metadata detection using `python-magic`.
+    - Integrate hashing (SHA-256 + TLSH) and metadata extractors for PDF (`pypdf`/`pikepdf`), DOCX (`python-docx`), MSG (`extract-msg`/`mailparser`).
+    - Run structural/authenticity checks via tuned in-house heuristics (heading detection, TOC coverage, entropy) with graceful degradation if rich parsers unavailable.
+    - Add pytest coverage with curated fixtures (TXT, PDF, DOCX, MSG) verifying metrics + signals.
+  - ### Stage Gamma — Image Analyzer Suite
+    - Harvest EXIF via `piexif`/`Pillow`, compute ELA using `numpy`, detect clones with `opencv` block matching, evaluate PRNU-inspired residual statistics with custom high-pass filters.
+    - Enforce fallback path for unsupported/low-resolution imagery with explicit signal + HTTP 415 guardrail.
+    - Add pytest coverage using synthetic PNG/JPEG fixtures verifying metrics + fallback.
+  - ### Stage Delta — Financial Analyzer Suite
+    - Load CSV via `pandas`, reconcile totals with `Decimal`, compute per-entity aggregates.
+    - Execute IsolationForest (>=5 rows) and z-score fallback (<=4 rows), capturing anomalies + diagnostics.
+    - Persist run artefact snapshots for build log + tests.
+  - ### Stage Epsilon — API & Telemetry Wiring
+    - Extend `/forensics/{type}` responses with `summary`, `signals`, `raw`, `fallback_applied` fields.
+    - Thread forensics trace handles into `/query` responses referencing stored reports.
+    - Update job manifest schema + Pydantic models accordingly; adjust FastAPI tests.
+  - ### Stage Zeta — Tooling & Observability
+    - Author CLI `backend/tools/forensics.py` (dump/regenerate) with integration test.
+    - Produce build log entry capturing command output, key metrics, and validation summary.
+    - Append ACE memory + AGENTS chain-of-stewardship.
+
+- ## Validation Playbook
+  - ### Automated
+    - `pytest backend/tests/test_api.py -q`
+    - `pytest backend/tests/test_forensics.py -q`
+    - `pytest backend/tests/test_forensics_cli.py -q`
+  - ### Manual
+    - Inspect generated `storage/forensics/<doc>/report.json` for schema compliance.
+    - Run CLI dump for sample doc and verify console output matches stored artefact.
+    - Review build log + ACE memory for completeness.
+
+- ## Risk Ledger
+  - ### R1: Heavy dependencies inflate CI time.
+    - #### Mitigation: Scope installs to backend requirements, cache wheels locally, keep dataset lightweight.
+  - ### R2: Third-party parsers fail on malformed input.
+    - #### Mitigation: Guard with targeted exception handling, emit structured `signals` recording failures without aborting pipeline.
+  - ### R3: IsolationForest randomness reduces determinism.
+    - #### Mitigation: Fix random seed, persist diagnostics, and couple with deterministic fallback.
+  - ### R4: Storage schema migration breaks legacy artefacts.
+    - #### Mitigation: Provide loader compatibility layer reading legacy `{type}.json` when `report.json` absent, flagging upgrade path in notes.
+
+- ## Notes & Handoff
+  - ### Dataset Preparation
+    - Curate fixtures: `sample_contract.pdf`, `sample_brief.docx`, `sample_email.msg`, `ledger.csv`, `tampered.jpg` (original + manipulated), `lowres.png`.
+  - ### Observatory Hooks
+    - Capture stage durations + warnings inside report for future telemetry pipeline ingestion.
+  - ### Follow-up Considerations
+    - Evaluate GPU-accelerated forgery detectors once CI runner capacity confirmed.
+    - Integrate with telemetry exporters for Phase 5 guardrails.

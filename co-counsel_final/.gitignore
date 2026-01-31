@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+.next/
+dist/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+
+# Env & local
+.env
+.env.*
+storage/
+!backend/app/storage/
+backend/app/storage/__pycache__/
+var/
+
+# Backups
+backups/
+
+# Logs
+*.log
+build_logs/*.jsonl
+coverage.xml
+.coverage
+htmlcov/
+pytest-backend.xml
+
+# Misc
+.DS_Store
+Thumbs.db
+
+
+.gemini/
+gha-creds-*.json

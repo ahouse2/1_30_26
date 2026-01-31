@@ -1,0 +1,72 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/refs/heads/main/schemas/config.json",
+  "always-link-local": false,
+  "separate-pull-requests": true,
+  "always-update": true,
+  "bootstrap-sha": "afad6013a55f7614de2c2e5c9b090d271e821e01",
+  "commit-search-depth": 50,
+  "plugins": ["node-workspace"],
+  "packages": {
+    "react-sdk": {
+      "component": "react"
+    },
+    "showcase": {},
+    "cli": {
+      "component": "tambo"
+    },
+    "create-tambo-app": {},
+    "docs": {},
+    "apps/web": {},
+    "apps/api": {}
+  },
+  "changelog-sections": [
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance Improvements"
+    },
+    {
+      "type": "chore",
+      "section": "Miscellaneous Chores"
+    },
+    {
+      "type": "revert",
+      "section": "Reverts"
+    },
+    {
+      "type": "docs",
+      "section": "Documentation"
+    },
+    {
+      "type": "deps",
+      "section": "Dependencies"
+    },
+    {
+      "type": "style",
+      "section": "Styles"
+    },
+    {
+      "type": "refactor",
+      "section": "Code Refactoring"
+    },
+    {
+      "type": "test",
+      "section": "Tests"
+    },
+    {
+      "type": "build",
+      "section": "Build System"
+    },
+    {
+      "type": "ci",
+      "section": "Continuous Integration"
+    }
+  ]
+}

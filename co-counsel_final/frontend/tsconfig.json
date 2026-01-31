@@ -1,0 +1,25 @@
+﻿{
+    "extends":  "./tsconfig.node.json",
+    "compilerOptions":  {
+                            "jsx":  "react-jsx",
+                            "types":  [
+                                          "vite/client",
+                                          "@testing-library/jest-dom"
+                                      ],
+                            "paths":  {
+                                          "@/*":  [
+                                                      "src/*"
+                                                  ]
+                                      },
+                            "baseUrl":  "."
+                        },
+    "include":  [
+                    "src",
+                    "tests"
+                ],
+    "references":  [
+                       {
+                           "path":  "./tsconfig.node.json"
+                       }
+                   ]
+}

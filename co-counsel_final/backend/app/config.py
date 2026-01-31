@@ -1,0 +1,310 @@
+from __future__ import annotations
+
+from functools import lru_cache
+from pathlib import Path
+from typing import Dict, Literal, Optional
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Runtime configuration for the Co-Counsel API."""
+
+    app_name: str = "Co-Counsel API"
+    app_version: str = "0.1.0"
+
+    model_providers_primary: str = Field(default="gemini")
+    model_providers_secondary: str | None = Field(default="openai")
+    provider: Optional[str] = Field(default=None)
+    gemini_api_key: Optional[str] = Field(default=None)
+    default_chat_model: str = Field(default="gemini-2.5-flash")
+    default_embedding_model: str = Field(default="text-embedding-004")
+    default_vision_model: str = Field(default="gemini-2.5-flash")
+    provider_api_base_urls: Dict[str, str] = Field(
+        default_factory=lambda: {
+            "openai": "https://api.openai.com/v1",
+            "azure-openai": "https://{resource-name}.openai.azure.com",
+            "gemini": "https://generativelanguage.googleapis.com/v1beta",
+            "huggingface": "https://api-inference.huggingface.co/models",
+        }
+    )
+    provider_local_runtime_paths: Dict[str, Path] = Field(
+        default_factory=lambda: {
+            "ollama": Path("runtime/ollama"),
+            "llama.cpp": Path("runtime/llama_cpp"),
+            "gguf-local": Path("runtime/gguf"),
+        }
+    )
+
+    neo4j_uri: str = Field(default="neo4j://localhost:7687")
+    neo4j_user: str = Field(default="neo4j")
+    neo4j_password: str = Field(default="neo4j")
+
+    qdrant_url: Optional[str] = Field(default=None)
+    qdrant_path: Optional[str] = Field(default=None)
+
+    vector_backend: Literal["qdrant", "chroma", "memory"] = Field(default="qdrant")
+    vector_dir: Path = Field(default=Path("storage/vector"))
+    ingestion_chroma_dir: Path = Field(default=Path("storage/chroma"))
+    chroma_collection: str = Field(default="cocounsel_documents")
+    ingestion_llama_cache_dir: Path = Field(default=Path("storage/llama_cache"))
+    forensics_dir: Path = Field(default=Path("storage/forensics"))
+    forensics_chain_path: Path = Field(default=Path("storage/forensics_chain/ledger.jsonl"))
+    timeline_path: Path = Field(default=Path("storage/timeline.jsonl"))
+    job_store_dir: Path = Field(default=Path("storage/jobs"))
+    encryption_key: str = Field(default="a_very_secret_key_for_document_encryption_32_bytes_long", min_length=32) # Added
+    document_storage_path: Path = Field(default=Path("storage/documents")) # Renamed from document_store_dir for clarity
+    ingestion_workspace_dir: Path = Field(default=Path("storage/workspaces"))
+    agent_threads_dir: Path = Field(default=Path("storage/agent_threads"))
+    agent_retry_attempts: int = Field(default=3, ge=1)
+    agent_retry_backoff_ms: int = Field(default=0, ge=0)
+    agent_circuit_threshold: int = Field(default=4, ge=1)
+    agent_circuit_window_seconds: float = Field(default=30.0, ge=1.0)
+    agent_circuit_cooldown_seconds: float = Field(default=45.0, ge=1.0)
+    agent_default_autonomy: Literal["low", "balanced", "high"] = Field(default="balanced")
+    agent_max_turns: int = Field(default=12, ge=5, le=40)
+    agents_policy_enabled: bool = Field(default=True)
+    agents_policy_initial_trust: float = Field(default=0.6, ge=0.0, le=2.0)
+    agents_policy_trust_threshold: float = Field(default=0.35, ge=0.0, le=1.5)
+    agents_policy_decay: float = Field(default=0.15, ge=0.0, le=1.0)
+    agents_policy_success_reward: float = Field(default=0.2, ge=0.0, le=1.5)
+    agents_policy_failure_penalty: float = Field(default=0.45, ge=0.0, le=2.0)
+    agents_policy_exploration_probability: float = Field(default=0.05, ge=0.0, le=1.0)
+    agents_policy_seed: int | None = Field(default=None)
+    agents_policy_observable_roles: tuple[str, ...] = Field(
+        default=("strategy", "ingestion", "research", "cocounsel", "qa")
+    )
+    agents_policy_suppressible_roles: tuple[str, ...] = Field(
+        default=("ingestion", "cocounsel")
+    )
+    credentials_registry_path: Path | None = Field(default=None)
+    settings_store_path: Path = Field(default=Path("storage/settings/preferences.json"))
+    manifest_encryption_key_path: Path = Field(default=Path("storage/manifest.key"))
+    manifest_retention_days: int = Field(default=30)
+    audit_log_path: Path = Field(default=Path("storage/audit.log"))
+    billing_usage_path: Path = Field(default=Path("storage/billing/usage.json"))
+    cost_tracking_path: Path = Field(default=Path("storage/costs/events.jsonl"))
+    scenario_library_path: Path | None = Field(default=None)
+    scenario_default_top_k: int = Field(default=4, ge=1, le=20)
+
+    secret_key: str = Field(default="super-secret-jwt-key-longer-than-32-chars-now", min_length=32)
+
+    tts_enabled: bool = Field(default=True)
+    tts_service_url: str | None = Field(default=None)
+    tts_timeout_seconds: float = Field(default=15.0, ge=1.0)
+    tts_cache_dir: Path = Field(default=Path("storage/audio_cache"))
+    tts_default_voice: str = Field(default="larynx:en-us-blizzard_lessac")
+    knowledge_catalog_path: Path = Field(default=Path("docs/knowledge/catalog.json"))
+    knowledge_content_dir: Path = Field(default=Path("docs/knowledge/best_practices"))
+    knowledge_progress_path: Path = Field(default=Path("storage/knowledge/progress.json"))
+
+    privilege_classifier_threshold: float = Field(default=0.68)
+    privilege_policy_review_threshold: float = Field(default=0.68)
+    privilege_policy_block_threshold: float = Field(default=0.92)
+    privilege_policy_audit_category: str = Field(default="security.privilege")
+
+    verify_pdf_endpoint: Optional[str] = Field(default=None, description="Endpoint for the VerifyPDF API.")
+    verify_pdf_api_key: Optional[str] = Field(default=None, description="API key for the VerifyPDF API.")
+
+
+    security_mtls_ca_path: Path | None = Field(default=None)
+    security_mtls_registry_path: Path | None = Field(default=None)
+    security_mtls_header: str = Field(default="x-client-cert")
+    security_mtls_optional_paths: tuple[str, ...] = Field(default=("/health",))
+    security_mtls_clock_skew: int = Field(default=60)
+
+    security_oauth_jwks_path: Path | None = Field(default=None)
+    security_token_issuer: str | None = Field(default=None)
+    security_token_leeway: int = Field(default=60)
+
+    security_audience_ingest: str = Field(default="co-counsel.ingest")
+    security_audience_query: str = Field(default="co-counsel.query")
+    security_audience_timeline: str = Field(default="co-counsel.timeline")
+    security_audience_graph: str = Field(default="co-counsel.graph")
+    security_audience_forensics: str = Field(default="co-counsel.forensics")
+    security_audience_agents: str = Field(default="co-counsel.agents")
+    security_audience_billing: str = Field(default="co-counsel.billing")
+    security_audience_dev_agent: str = Field(default="co-counsel.dev-agent")
+    security_audience_knowledge: str = Field(default="co-counsel.knowledge")
+    security_audience_settings: str = Field(default="co-counsel.settings")
+
+    dev_agent_validation_commands: tuple[tuple[str, ...], ...] = Field(
+        default=(
+            (
+                "python",
+                "-m",
+                "tools.qa.quality_gate",
+                "--threshold",
+                "85",
+                "--",
+                "backend/tests",
+                "-q",
+            ),
+            ("ruff", "check", "backend"),
+        )
+    )
+    dev_agent_required_scopes: tuple[str, ...] = Field(default=("dev-agent:admin",))
+    dev_agent_admin_roles: tuple[str, ...] = Field(default=("PlatformEngineer", "AutomationService"))
+    dev_agent_rollout_stages: tuple[str, ...] = Field(default=("canary", "pilot", "ga"))
+    dev_agent_feature_flag_prefix: str = Field(default="dev.agent")
+    dev_agent_ci_workflows: tuple[str, ...] = Field(default=("backend_ci.yml", "dev_agent_gate.yml"))
+    dev_agent_governance_policy_version: str = Field(default="2025.11")
+    telemetry_enabled: bool = Field(default=False)
+    telemetry_service_name: str = Field(default="cocounsel-backend")
+    telemetry_environment: str = Field(default="local")
+    telemetry_otlp_endpoint: str | None = Field(default=None)
+    telemetry_otlp_insecure: bool = Field(default=True)
+    telemetry_metrics_interval: float = Field(default=30.0)
+    telemetry_console_fallback: bool = Field(default=True)
+
+    billing_default_plan: str = Field(default="community")
+    billing_plan_overrides: Dict[str, str] = Field(default_factory=dict)
+    billing_support_overrides: Dict[str, str] = Field(default_factory=dict)
+    billing_health_soft_threshold: float = Field(default=0.8)
+    billing_health_hard_threshold: float = Field(default=0.95)
+
+    voice_enabled: bool = Field(default=True)
+    voice_sessions_dir: Path = Field(default=Path("storage/voice/sessions"))
+    voice_cache_dir: Path = Field(default=Path("storage/voice/cache"))
+    voice_whisper_model: str = Field(default="medium.en")
+    voice_whisper_compute_type: Literal["int8_float16", "float16", "float32"] = Field(
+        default="int8_float16"
+    )
+    voice_device_preference: Literal["auto", "cuda", "cpu"] = Field(default="auto")
+    voice_tts_model: str = Field(default="tts_models/en/vctk/vits")
+    voice_sentiment_model: str = Field(
+        default="distilbert-base-uncased-finetuned-sst-2-english"
+    )
+    voice_sample_rate: int = Field(default=22050, ge=8000, le=48000)
+    voice_personas: Dict[str, Dict[str, str]] = Field(
+        default_factory=lambda: {
+            "aurora": {
+                "label": "Aurora",
+                "description": "Warm, empathetic cadence suitable for sensitive updates.",
+                "speaker_id": "p273",
+            },
+            "atlas": {
+                "label": "Atlas",
+                "description": "Calm, authoritative delivery for compliance briefings.",
+                "speaker_id": "p270",
+            },
+            "lyra": {
+                "label": "Lyra",
+                "description": "Crisp, energetic tone tuned for investigative stand-ups.",
+                "speaker_id": "p268",
+            },
+        }
+    )
+
+    qdrant_collection: str = Field(default="cocounsel_documents")
+    qdrant_vector_size: int = Field(default=384)
+    qdrant_distance: Literal["Cosine", "Dot", "Euclid"] = Field(default="Cosine")
+
+    ingestion_cost_mode: Literal["community", "pro", "enterprise"] = Field(default="community")
+    ingestion_chunk_size: int = Field(default=400)
+    ingestion_chunk_overlap: int = Field(default=60)
+    ingestion_max_triplets_per_chunk: int = Field(default=12)
+    ingestion_graph_batch_size: int = Field(default=64)
+    ingestion_hf_model: str = Field(default="sentence-transformers/all-MiniLM-L6-v2")
+    ingestion_hf_dimensions: Optional[int] = Field(default=None)
+    ingestion_hf_device: Optional[str] = Field(default=None)
+    ingestion_hf_cache_dir: Optional[Path] = Field(default=None)
+    ingestion_openai_model: str = Field(default="text-embedding-3-small")
+    ingestion_openai_dimensions: Optional[int] = Field(default=None)
+    ingestion_openai_api_key: Optional[str] = Field(default=None)
+    ingestion_openai_base: Optional[str] = Field(default=None)
+    ingestion_enterprise_embedding_model: str = Field(default="text-embedding-3-large")
+    ingestion_enterprise_embedding_dimensions: Optional[int] = Field(default=None)
+    ingestion_enterprise_embedding_api_key: Optional[str] = Field(default=None)
+    ingestion_azure_openai_endpoint: Optional[str] = Field(default=None)
+    ingestion_azure_openai_deployment: Optional[str] = Field(default=None)
+    ingestion_azure_openai_api_version: Optional[str] = Field(default="2024-05-01-preview")
+    ingestion_tesseract_languages: str = Field(default="eng")
+    ingestion_tesseract_path: Optional[Path] = Field(default=None)
+    ingestion_vision_endpoint: Optional[str] = Field(default=None)
+    ingestion_vision_model: Optional[str] = Field(default=None)
+    ingestion_vision_api_key: Optional[str] = Field(default=None)
+    ingestion_ollama_model: str = Field(default="llama3.1") # Added
+    ingestion_ollama_base: Optional[str] = Field(default="http://localhost:11434") # Added with default
+    llamacpp_server_url: Optional[str] = Field(default="http://localhost:8080") # Added for llama.cpp
+    ingestion_enterprise_llm_model: str = Field(default="gpt-4o") # Added
+    ingestion_enterprise_llm_api_key: Optional[str] = Field(default=None) # Added
+    
+    # Blockchain API Keys for Crypto Tracing
+    blockchain_api_key_ethereum: Optional[str] = Field(default=None, description="API key for Ethereum blockchain data provider (e.g., Etherscan).")
+    blockchain_api_key_bitcoin: Optional[str] = Field(default=None, description="API key for Bitcoin blockchain data provider (e.g., Blockchair).")
+    blockchain_api_base_ethereum: Optional[str] = Field(default=None, description="Base URL for Ethereum blockchain API.")
+    blockchain_api_base_bitcoin: Optional[str] = Field(default=None, description="Base URL for Bitcoin blockchain API.")
+
+    ingestion_queue_maxsize: int = Field(default=32)
+    ingestion_worker_concurrency: int = Field(default=1)
+
+    courtlistener_endpoint: str = Field(
+        default="https://www.courtlistener.com/api/rest/v3/opinions/"
+    )
+    courtlistener_token: Optional[str] = Field(default=None)
+    caselaw_endpoint: str = Field(default="https://api.case.law/v1/cases/")
+    caselaw_api_key: Optional[str] = Field(default=None)
+    caselaw_max_results: int = Field(default=10, ge=0, le=100)
+
+    sql_database_uri: Optional[str] = Field(default=None, description="Connection URI for the SQL database (e.g., 'sqlite:///./sql_app.db').")
+    govinfo_api_key: Optional[str] = Field(default=None) # Added for GovInfo API
+    timeline_storage_path: Path = Field(default=Path("storage/timelines")) # Updated for TimelineService
+
+    retrieval_max_search_window: int = Field(default=60)
+    retrieval_graph_hop_window: int = Field(default=12)
+    retrieval_cross_encoder_model: Optional[str] = Field(default=None)
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        protected_namespaces=(),
+    )
+
+    def prepare_directories(self) -> None:
+        self.vector_dir.mkdir(parents=True, exist_ok=True)
+        self.ingestion_chroma_dir.mkdir(parents=True, exist_ok=True)
+        self.ingestion_llama_cache_dir.mkdir(parents=True, exist_ok=True)
+        if self.ingestion_hf_cache_dir:
+            self.ingestion_hf_cache_dir.mkdir(parents=True, exist_ok=True)
+        self.forensics_dir.mkdir(parents=True, exist_ok=True)
+        self.forensics_chain_path.parent.mkdir(parents=True, exist_ok=True)
+        self.timeline_storage_path.mkdir(parents=True, exist_ok=True) # Updated for TimelineService
+        self.job_store_dir.mkdir(parents=True, exist_ok=True)
+        self.document_storage_path.mkdir(parents=True, exist_ok=True) # Updated
+        self.ingestion_workspace_dir.mkdir(parents=True, exist_ok=True)
+        self.agent_threads_dir.mkdir(parents=True, exist_ok=True)
+        self.audit_log_path.parent.mkdir(parents=True, exist_ok=True)
+        self.billing_usage_path.parent.mkdir(parents=True, exist_ok=True)
+        self.cost_tracking_path.parent.mkdir(parents=True, exist_ok=True)
+        self.tts_cache_dir.mkdir(parents=True, exist_ok=True)
+        self.knowledge_catalog_path.parent.mkdir(parents=True, exist_ok=True)
+        self.knowledge_content_dir.mkdir(parents=True, exist_ok=True)
+        self.knowledge_progress_path.parent.mkdir(parents=True, exist_ok=True)
+        self.voice_sessions_dir.mkdir(parents=True, exist_ok=True)
+        self.settings_store_path.parent.mkdir(parents=True, exist_ok=True)
+        self.voice_cache_dir.mkdir(parents=True, exist_ok=True)
+        for runtime_path in self.provider_local_runtime_paths.values():
+            runtime_path.mkdir(parents=True, exist_ok=True)
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    settings = Settings()  # type: ignore[arg-type]
+    settings.prepare_directories()
+    # Phase 2: support secret-based Neo4j password via file path if provided
+    password_file = os.environ.get("NEO4J_PASSWORD_FILE")
+    if password_file and Path(password_file).exists():
+        try:
+            with open(password_file, "r", encoding="utf-8") as f:
+                pwd = f.read().strip()
+                if pwd:
+                    settings.neo4j_password = pwd
+        except Exception:
+            pass
+    return settings
+
+
+def reset_settings_cache() -> None:
+    get_settings.cache_clear()
