@@ -4,6 +4,7 @@ export * from "./ComponentDecision";
 export * from "./composio-utils";
 export * from "./email";
 export * from "./encrypt";
+export * from "./goal-tracker";
 export * from "./json";
 export type * from "./llm-parameter-types";
 export * from "./mcp-auth";
