@@ -193,10 +193,15 @@ def create_llm_service(config: LlmConfig) -> BaseLlmService:
     raise ValueError(f"Unsupported LLM provider: {config.provider}")
 
 
+def build_llm_service(config: LlmConfig) -> BaseLlmService:
+    return create_llm_service(config)
+
+
 __all__ = [
     "configure_global_settings",
     "create_embedding_model",
     "create_sentence_splitter",
-    "create_llm_service", # Added
-    "BaseLlmService", # Added
+    "create_llm_service",
+    "build_llm_service",
+    "BaseLlmService",
 ]

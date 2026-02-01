@@ -26,6 +26,7 @@ from .tools import (
     ToolInvocation,
 )
 from .types import AgentThread, AgentTurn
+from backend.ingestion.llama_index_factory import build_llm_service
 
 ComponentExecutor = Callable[
     [
@@ -419,6 +420,9 @@ from backend.app.agents.teams.legal_research import build_legal_research_team
 from backend.app.agents.teams.litigation_support import build_litigation_support_team
 from backend.app.agents.teams.software_development import build_software_development_team
 from backend.app.agents.teams.ai_qa_oversight import build_ai_qa_oversight_committee
+from backend.app.agents.swarms_orchestrator import SwarmsOrchestrator
+from backend.app.agents.orchestrator import AgentsOrchestrator
+from backend.ingestion.settings import LlmConfig
 
 @dataclass(slots=True)
 class MicrosoftAgentsOrchestrator:
@@ -618,8 +622,8 @@ def get_orchestrator(
     forensics_service: ForensicAnalyzer,
     knowledge_graph_service: KnowledgeGraphService,
     memory_store: AgentMemoryStore,
-) -> MicrosoftAgentsOrchestrator:
-    """Get the default Microsoft Agents orchestrator."""
+) -> AgentsOrchestrator:
+    """Get the default Swarms orchestrator."""
     llm_service = build_llm_service(llm_config)
     graph_agent = build_graph_rag_agent(llm_service, document_store)
     qa_agent = build_qa_agent(llm_service)
@@ -651,7 +655,7 @@ def get_orchestrator(
     refinement_qa_tool = RefinementQATool()
 
 
-    return MicrosoftAgentsOrchestrator(
+    return SwarmsOrchestrator(
         strategy_tool=StrategyTool(graph_agent=graph_agent),
         ingestion_tool=IngestionTool(document_store=document_store),
         research_tool=ResearchTool(graph_agent=graph_agent),
@@ -661,11 +665,4 @@ def get_orchestrator(
         qa_tool=QATool(qa_agent=qa_agent),
         echo_tool=EchoTool(llm_service=llm_service),
         memory_store=memory_store,
-        qa_agent=qa_agent,
-        # Pass all new tools here
-        # This part needs to be carefully managed as the orchestrator's __init__
-        # doesn't currently accept an arbitrary list of tools.
-        # For now, we'll assume the tools are accessible globally or through a tool registry.
-        # A more robust solution would involve modifying MicrosoftAgentsOrchestrator's __init__
-        # to accept a list of tools or a tool registry.
     )

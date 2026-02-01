@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List
 
-from backend.app.agents.runner import get_orchestrator, MicrosoftAgentsOrchestrator
+from backend.app.agents.runner import get_orchestrator
+from backend.app.agents.orchestrator import AgentsOrchestrator
 from backend.app.config import LlmConfig, get_llm_config
 from backend.app.storage.document_store import DocumentStore
 from backend.app.forensics.analyzer import ForensicAnalyzer, get_forensic_analyzer
@@ -23,22 +24,18 @@ class AgentInteractionResponse(BaseModel):
 @router.post("/agents/invoke", response_model=AgentInteractionResponse)
 async def invoke_agent(
     request: AgentInteractionRequest,
-    orchestrator: MicrosoftAgentsOrchestrator = Depends(get_orchestrator),
+    orchestrator: AgentsOrchestrator = Depends(get_orchestrator),
 ):
     """
     Invoke a specific agent with a prompt.
     """
-    if request.agent_name not in orchestrator.agents:
-        raise HTTPException(status_code=404, detail=f"Agent '{request.agent_name}' not found.")
-
-    session = orchestrator.get_session(request.session_id)
-    
     try:
-        response = await session.invoke(
+        response = orchestrator.invoke_agent(
+            session_id=request.session_id,
             agent_name=request.agent_name,
             prompt=request.prompt,
         )
-        return AgentInteractionResponse(response=response.message)
+        return AgentInteractionResponse(response=response)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
