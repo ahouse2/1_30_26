@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = '/api/v1'; // Adjust if your API is hosted elsewhere
+import { buildApiUrl } from '@/config';
 
 // --- Forensic Analysis Types ---
 export interface TamperScoreResult {
@@ -75,7 +74,7 @@ export const getForensicAnalysis = async (
   version?: string
 ): Promise<ForensicAnalysisResult> => {
   const response = await axios.get<ForensicAnalysisResult>(
-    `${API_BASE_URL}/cases/${caseId}/${docType}/${docId}/forensics`,
+    buildApiUrl(`/forensics/${caseId}/${docType}/${docId}/forensics`),
     { params: { version } }
   );
   return response.data;
@@ -88,7 +87,7 @@ export const getCryptoTracing = async (
   version?: string
 ): Promise<CryptoTracingResult> => {
   const response = await axios.get<CryptoTracingResult>(
-    `${API_BASE_URL}/cases/${caseId}/${docType}/${docId}/crypto-tracing`,
+    buildApiUrl(`/forensics/${caseId}/${docType}/${docId}/crypto-tracing`),
     { params: { version } }
   );
   return response.data;

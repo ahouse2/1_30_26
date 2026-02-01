@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import React, { useState, useEffect } from 'react';
+import { buildApiUrl } from '@/config';
 
 interface Scenario {
   id: string;
@@ -18,7 +19,7 @@ export function MockTrialArena() {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('/api/scenarios');
+        const response = await fetch(buildApiUrl('/scenarios'));
         if (!response.ok) {
           throw new Error(`Failed to fetch scenarios: ${response.statusText}`);
         }

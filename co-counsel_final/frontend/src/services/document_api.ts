@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = '/api/documents'; // Adjust if your API is hosted elsewhere
+import { buildApiUrl } from '@/config';
 
 interface UploadDocumentResponse {
   message: string;
@@ -25,7 +24,7 @@ export const uploadDocument = async (
   formData.append('doc_type', docType);
   formData.append('file', file);
 
-  const response = await axios.post<UploadDocumentResponse>(`${API_BASE_URL}/upload`, formData, {
+  const response = await axios.post<UploadDocumentResponse>(buildApiUrl('/upload'), formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -44,7 +43,10 @@ export const getDocument = async (
   version?: string
 ): Promise<DocumentContentResponse> => {
   const params = version ? { version } : {};
-  const response = await axios.get<DocumentContentResponse>(`${API_BASE_URL}/${caseId}/${docType}/${docId}`, { params });
+  const response = await axios.get<DocumentContentResponse>(
+    buildApiUrl(`/${caseId}/${docType}/${docId}`),
+    { params }
+  );
   return response.data;
 };
 
@@ -57,7 +59,7 @@ export const listDocumentVersions = async (
   docType: 'my_documents' | 'opposition_documents',
   docId: string
 ): Promise<string[]> => {
-  const response = await axios.get<string[]>(`${API_BASE_URL}/${caseId}/${docType}/${docId}/versions`);
+  const response = await axios.get<string[]>(buildApiUrl(`/${caseId}/${docType}/${docId}/versions`));
   return response.data;
 };
 
@@ -68,6 +70,9 @@ export const deleteDocument = async (
   version?: string
 ): Promise<{ message: string }> => {
   const params = version ? { version } : {};
-  const response = await axios.delete<{ message: string }>(`${API_BASE_URL}/${caseId}/${docType}/${docId}`, { params });
+  const response = await axios.delete<{ message: string }>(
+    buildApiUrl(`/${caseId}/${docType}/${docId}`),
+    { params }
+  );
   return response.data;
 };

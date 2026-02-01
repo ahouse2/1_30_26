@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { buildApiUrl } from '@/config';
 
 interface ServiceRequest {
   id: string;
@@ -18,7 +19,7 @@ export default function ServiceOfProcessPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/service-of-process');
+      const response = await fetch(buildApiUrl('/api/service-of-process'));
       if (!response.ok) {
         throw new Error(`Failed to fetch service requests: ${response.statusText}`);
       }
@@ -40,7 +41,7 @@ export default function ServiceOfProcessPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch('/api/service-of-process', {
+        const response = await fetch(buildApiUrl('/api/service-of-process'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

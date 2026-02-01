@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { buildApiUrl } from '@/config';
 
 interface ChatMessage {
   id: string;
@@ -38,7 +39,7 @@ export function LiveCoCounselChat({ speak }: LiveCoCounselChatProps) {
     try {
       // For demonstration, using a hardcoded agent_id. In a real app, this would be dynamic.
       const agentId = 'co-counsel-agent'; 
-      const response = await fetch(`/api/agents/${agentId}/run`, {
+      const response = await fetch(buildApiUrl(`/agents/${agentId}/run`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

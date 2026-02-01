@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import React, { useState, useEffect } from 'react';
+import { buildApiUrl } from '@/config';
 
 interface GraphNode {
   id: string;
@@ -27,7 +28,7 @@ export function GraphExplorer() {
         setLoading(true);
         setError(null);
         // For demonstration, using a hardcoded node_id. In a real app, this would be dynamic.
-        const response = await fetch('/api/graph/neighbors/some_hardcoded_node_id');
+        const response = await fetch(buildApiUrl('/graph/neighbors/some_hardcoded_node_id'));
         if (!response.ok) {
           throw new Error(`Failed to fetch graph data: ${response.statusText}`);
         }
