@@ -18,8 +18,8 @@ Phase 4 — Forensics Core (Non‑Negotiable)
 - Image authenticity pipeline (EXIF, ELA, PRNU/clone detection where feasible)
 - Financial forensics (basic): totals consistency, anomaly flags, entity extraction; produce forensics summary artifacts
 
-Phase 5 — Multi‑Agent + ACE
-- MS Agents workflow nodes; memory threads; QAAgent + rubric
+Phase 5 — Swarms Orchestration
+- Swarms routing + agent teams; deterministic tool plans; QA rubric enforcement
 
 Phase 6 — Timeline
 - Event graph + API; UI timeline with cited pop‑outs
@@ -28,7 +28,7 @@ Phase 7 — Legal Research & Extended Forensics
 - CourtListener/web search integrations; privilege detector; chain‑of‑custody exports
 
 Phase 8–9 — API + Frontend
-- /ingest, /query, /timeline, /graph/neighbor; neon UI chat/graph
+- /ingest, /query, /timeline, /graph/neighbor; legal-grade UI refresh with evidence traceability
 
 Phase 10 — Testing/Hardening
 - Unit/integration/e2e/load; security posture; orphan scan CI

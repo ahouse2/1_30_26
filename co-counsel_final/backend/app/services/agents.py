@@ -12,7 +12,7 @@ from uuid import uuid4
 from opentelemetry import metrics, trace
 from opentelemetry.trace import Status, StatusCode
 
-from ..agents import MicrosoftAgentsOrchestrator, get_orchestrator
+from ..agents import AgentsOrchestrator, get_orchestrator
 from ..agents.graph_manager import GraphManagerAgent
 from ..agents.qa import QAAgent
 from ..agents.types import AgentThread, AgentTurn
@@ -20,6 +20,8 @@ from ..config import get_settings
 from ..security.authz import Principal
 from ..storage.agent_memory_store import AgentMemoryStore, AgentThreadRecord
 from ..storage.document_store import DocumentStore
+from ..services.knowledge_graph_service import get_knowledge_graph_service
+from backend.ingestion.settings import build_runtime_config
 from ..storage.timeline_store import TimelineStore
 from ..utils.audit import AuditEvent, get_audit_trail
 from .errors import (
@@ -334,7 +336,7 @@ class AgentsService:
         memory_store: AgentMemoryStore | None = None,
         document_store: DocumentStore | None = None,
         qa_agent: QAAgent | None = None,
-        orchestrator: MicrosoftAgentsOrchestrator | None = None,
+        orchestrator: AgentsOrchestrator | None = None,
         graph_service: GraphService | None = None,
         timeline_store: TimelineStore | None = None,
         graph_agent: GraphManagerAgent | None = None,
@@ -343,7 +345,10 @@ class AgentsService:
         self.settings = get_settings()
         self.retrieval_service = retrieval_service or get_retrieval_service()
         self.forensics_service = forensics_service or get_forensics_service()
-        self.document_store = document_store or DocumentStore(self.settings.document_store_dir)
+        self.document_store = document_store or DocumentStore(
+            self.settings.document_storage_path,
+            self.settings.encryption_key,
+        )
         self.memory_store = memory_store or AgentMemoryStore(self.settings.agent_threads_dir)
         self.qa_agent = qa_agent or QAAgent()
         self.graph_service = graph_service or get_graph_service()
@@ -352,13 +357,13 @@ class AgentsService:
             graph_service=self.graph_service,
             timeline_store=self.timeline_store,
         )
+        llm_config = build_runtime_config(self.settings).llm
         self.orchestrator = orchestrator or get_orchestrator(
-            self.retrieval_service,
-            self.forensics_service,
+            llm_config,
             self.document_store,
-            self.qa_agent,
+            self.forensics_service,
+            get_knowledge_graph_service(),
             self.memory_store,
-            self.graph_agent,
         )
         self.policy_engine = policy_engine or AdaptivePolicyEngine(self.settings)
         self.audit = get_audit_trail()
