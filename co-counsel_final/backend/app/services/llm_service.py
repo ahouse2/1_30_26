@@ -13,6 +13,7 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional, Sequence
 
 from backend.app.config import get_settings
+from backend.app.services.settings import SettingsService
 from backend.app.providers.catalog import ProviderCapability
 from backend.app.providers.registry import (
     ProviderCapabilityError,
@@ -456,6 +457,9 @@ SERVICE_CLASSES: Dict[str, type[BaseLlmService]] = {
     "gguf-local": LlamaCppLlmService,  # GGUF uses same server protocol
     "openai": OpenAILlmService,
     "azure-openai": OpenAILlmService,  # Azure uses OpenAI-compatible API
+    "openrouter": OpenAILlmService,
+    "localai": OpenAILlmService,
+    "lmstudio": OpenAILlmService,
     "gemini": GeminiLlmService,
     "huggingface": HuggingFaceLlmService,
 }
@@ -487,6 +491,7 @@ def create_llm_service(
         )
 
     settings = get_settings()
+    settings_service = SettingsService(runtime_settings=settings)
 
     # Resolve model from settings if not provided
     if model is None:
@@ -498,11 +503,13 @@ def create_llm_service(
     # Resolve API keys and base URLs from settings
     if provider == "ollama":
         kwargs.setdefault("base_url", settings.ingestion_ollama_base or "http://localhost:11434")
-    elif provider == "openai":
-        kwargs.setdefault("api_key", settings.ingestion_openai_api_key)
-        kwargs.setdefault("base_url", settings.provider_api_base_urls.get("openai"))
+    elif provider in {"openai", "openrouter", "localai", "lmstudio"}:
+        api_key = settings_service.get_provider_api_key(provider) or settings.ingestion_openai_api_key
+        kwargs.setdefault("api_key", api_key)
+        kwargs.setdefault("base_url", settings.provider_api_base_urls.get(provider))
     elif provider == "gemini":
-        kwargs.setdefault("api_key", settings.gemini_api_key)
+        api_key = settings_service.get_provider_api_key(provider) or settings.gemini_api_key
+        kwargs.setdefault("api_key", api_key)
     elif provider == "llama.cpp":
         runtime_path = settings.provider_local_runtime_paths.get("llama.cpp")
         if runtime_path:

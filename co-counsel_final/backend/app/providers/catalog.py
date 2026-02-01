@@ -356,6 +356,71 @@ MODEL_CATALOG: Mapping[str, Tuple[ModelInfo, ...]] = {
             availability="hosted-api",
         ),
     ),
+    "openrouter": (
+        ModelInfo(
+            model_id="openrouter/auto",
+            display_name="OpenRouter Auto (Router)",
+            context_window=200_000,
+            modalities=("text",),
+            capabilities=(ProviderCapability.CHAT,),
+            availability="general-cloud",
+        ),
+        ModelInfo(
+            model_id="openrouter/openai/gpt-4o",
+            display_name="OpenRouter GPT-4o",
+            context_window=128_000,
+            modalities=("text", "vision"),
+            capabilities=(
+                ProviderCapability.CHAT,
+                ProviderCapability.VISION,
+            ),
+            availability="general-cloud",
+        ),
+        ModelInfo(
+            model_id="openrouter/anthropic/claude-3.5-sonnet",
+            display_name="OpenRouter Claude 3.5 Sonnet",
+            context_window=200_000,
+            modalities=("text",),
+            capabilities=(ProviderCapability.CHAT,),
+            availability="general-cloud",
+        ),
+    ),
+    "localai": (
+        ModelInfo(
+            model_id="localai/auto",
+            display_name="LocalAI Auto",
+            context_window=32_768,
+            modalities=("text",),
+            capabilities=(ProviderCapability.CHAT,),
+            availability="local-runtime",
+        ),
+        ModelInfo(
+            model_id="localai/embeddings",
+            display_name="LocalAI Embeddings",
+            context_window=8_192,
+            modalities=("text",),
+            capabilities=(ProviderCapability.EMBEDDINGS,),
+            availability="local-runtime",
+        ),
+    ),
+    "lmstudio": (
+        ModelInfo(
+            model_id="lmstudio/auto",
+            display_name="LM Studio Auto",
+            context_window=32_768,
+            modalities=("text",),
+            capabilities=(ProviderCapability.CHAT,),
+            availability="local-runtime",
+        ),
+        ModelInfo(
+            model_id="lmstudio/embeddings",
+            display_name="LM Studio Embeddings",
+            context_window=8_192,
+            modalities=("text",),
+            capabilities=(ProviderCapability.EMBEDDINGS,),
+            availability="local-runtime",
+        ),
+    ),
     "ollama": (
         ModelInfo(
             model_id="llama3.1",

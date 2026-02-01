@@ -29,6 +29,9 @@ class Settings(BaseSettings):
             "azure-openai": "https://{resource-name}.openai.azure.com",
             "gemini": "https://generativelanguage.googleapis.com/v1beta",
             "huggingface": "https://api-inference.huggingface.co/models",
+            "openrouter": "https://openrouter.ai/api/v1",
+            "localai": "http://localhost:8080/v1",
+            "lmstudio": "http://localhost:1234/v1",
         }
     )
     provider_local_runtime_paths: Dict[str, Path] = Field(

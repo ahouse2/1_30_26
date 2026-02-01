@@ -64,6 +64,16 @@ class SettingsService:
     def model_catalog(self) -> ModelCatalogResponse:
         return ModelCatalogResponse(providers=self._build_catalog())
 
+    def get_provider_api_key(self, provider_id: str) -> Optional[str]:
+        state = self._load_state()
+        credentials = state.get("credentials", {})
+        if not isinstance(credentials, dict):
+            return None
+        provider_keys = credentials.get("provider_api_keys", {})
+        if not isinstance(provider_keys, dict):
+            return None
+        return _normalise_secret(provider_keys.get(provider_id))
+
     def _load_state(self) -> Dict[str, Any]:
         state = self._store.load()
         providers = state.setdefault("providers", {})

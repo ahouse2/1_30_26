@@ -92,6 +92,10 @@ from .api import ingestion
 
 app.include_router(ingestion.router)
 
+from .api import automation
+
+app.include_router(automation.router)
+
 from .api import knowledge
 
 app.include_router(knowledge.router)

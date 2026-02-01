@@ -93,10 +93,38 @@ class WebSourceConnector(BaseSourceConnector):
             name = f"{name}.html"
         return name
 
+
     @staticmethod
     def _normalise_url_path(url: str) -> str:
         parsed = urlparse(url)
         return parsed.path or "/"
+
+
+def build_connector(
+    source_type: str,
+    settings: Settings,
+    registry: CredentialRegistry,
+    logger: logging.Logger,
+) -> BaseSourceConnector:
+    kind = source_type.lower().strip()
+    if kind in {"local", "folder", "filesystem"}:
+        return LocalSourceConnector(settings, registry, logger)
+    if kind in {"web", "url"}:
+        return WebSourceConnector(settings, registry, logger)
+    if kind == "s3":
+        return S3SourceConnector(settings, registry, logger)
+    if kind in {"courtlistener", "court-listener"}:
+        return CourtListenerSourceConnector(settings, registry, logger)
+    if kind in {"websearch", "web-search"}:
+        return WebSearchSourceConnector(settings, registry, logger)
+    if kind == "sharepoint":
+        return SharePointSourceConnector(settings, registry, logger)
+    if kind == "onedrive":
+        return OneDriveSourceConnector(settings, registry, logger)
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Unsupported ingestion source type: {source_type}",
+    )
 
 
 class DigestCache:

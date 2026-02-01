@@ -13,7 +13,7 @@ const FolderUpload: React.FC<FolderUploadProps> = ({ onFolderSelected }) => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    noClick: true, // Prevent opening file dialog on click
+    noClick: false,
     // @ts-ignore
     webkitdirectory: true, // Enable folder selection
     directory: true, // Enable folder selection for newer browsers

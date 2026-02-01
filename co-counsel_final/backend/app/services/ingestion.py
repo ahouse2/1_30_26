@@ -32,6 +32,7 @@ from ..utils.text import find_dates, sentence_containing
 from ..utils.triples import EntitySpan, Triple, normalise_entity_id
 from .forensics import ForensicsReport, ForensicsService
 from .graph import GraphService, get_graph_service
+from .automation_pipeline import AutomationPipelineService, get_automation_pipeline_service
 from .ingestion_sources import MaterializedSource, build_connector
 from .ingestion_worker import (
     IngestionJobAlreadyQueued,
@@ -135,6 +136,7 @@ class IngestionService:
         job_store: JobStore | None = None,
         document_store: DocumentStore | None = None,
         forensics_service: ForensicsService | None = None,
+        automation_service: AutomationPipelineService | None = None,
         executor: ThreadPoolExecutor | None = None,
         worker: IngestionWorker | None = None,
     ) -> None:
@@ -146,6 +148,7 @@ class IngestionService:
         self.job_store = job_store or JobStore(self.settings.job_store_dir)
         self.document_store = document_store or DocumentStore(self.settings.document_store_dir)
         self.forensics_service = forensics_service or ForensicsService()
+        self.automation_service = automation_service or get_automation_pipeline_service()
         self.credential_registry = CredentialRegistry(self.settings.credentials_registry_path)
         self.executor = executor or _DEFAULT_EXECUTOR
         self.worker = worker
@@ -177,7 +180,14 @@ class IngestionService:
 
         job_id = str(uuid4())
         submitted_at = datetime.now(timezone.utc)
-        job_record = self._initialise_job_record(job_id, submitted_at, request.sources, actor)
+        automation_payload = request.automation.model_dump(exclude_none=True) if request.automation else None
+        job_record = self._initialise_job_record(
+            job_id,
+            submitted_at,
+            request.sources,
+            actor,
+            automation=automation_payload,
+        )
         self.job_store.write_job(job_id, job_record)
 
         sources_attribute = ",".join(sorted({source.type for source in request.sources}))
@@ -525,6 +535,21 @@ class IngestionService:
         timeline_details["enriched"] = enrichment_stats.mutated
         self._transition_job(job_record, "succeeded")
         self.job_store.write_job(job_id, job_record)
+        automation_payload = job_record.get("automation") or {}
+        if automation_payload.get("auto_run"):
+            try:
+                self.automation_service.run_stages(
+                    job_id,
+                    automation_payload.get("stages", []),
+                    question=automation_payload.get("question"),
+                    case_id=automation_payload.get("case_id"),
+                    autonomy_level=automation_payload.get("autonomy_level", "balanced"),
+                )
+            except Exception as exc:  # pragma: no cover - automation should not fail ingestion
+                self.logger.exception(
+                    "Automation pipeline failed after ingestion",
+                    extra={"job_id": job_id, "error": str(exc)},
+                )
         self.logger.info(
             "Ingestion completed",
             extra={"job_id": job_id, "documents": len(all_documents), "events": len(all_events)},
@@ -570,7 +595,9 @@ class IngestionService:
         graph.setdefault("nodes", 0)
         graph.setdefault("edges", 0)
         graph.setdefault("triples", 0)
+        details.setdefault("automation", {"stages": {}, "results": {"legal_frameworks": []}})
         job_record.setdefault("requested_by", self._system_actor())
+        job_record.setdefault("automation", None)
 
     def _refresh_timeline_enrichments(self) -> EnrichmentStats:
         service = TimelineService(store=self.timeline_store, graph_service=self.graph_service)
@@ -1000,6 +1027,7 @@ class IngestionService:
         submitted_at: datetime,
         sources: List[IngestionSource],
         actor: Dict[str, Any] | None = None,
+        automation: Dict[str, Any] | None = None,
     ) -> Dict[str, object]:
         iso = submitted_at.isoformat()
         return {
@@ -1015,8 +1043,10 @@ class IngestionService:
                 "timeline": {"events": 0},
                 "forensics": {"artifacts": [], "last_run_at": None},
                 "graph": {"nodes": 0, "edges": 0, "triples": 0},
+                "automation": {"stages": {}, "results": {"legal_frameworks": []}},
             },
             "requested_by": actor or self._system_actor(),
+            "automation": automation,
         }
 
     def _transition_job(self, job_record: Dict[str, object], status_value: str) -> None:
