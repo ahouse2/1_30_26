@@ -1,7 +1,8 @@
+import { API_BASE_URL } from '@/config';
+
 // Lightweight API client that prefixes all paths with the configured API base URL.
 export async function fetchFromApi(path: string, init?: RequestInit) {
-  const base = (import.meta.env.VITE_API_BASE_URL as string) ?? 'http://localhost:8000';
-  const url = new URL(path, base).toString();
+  const url = new URL(path, API_BASE_URL).toString();
   return fetch(url, init);
 }
 

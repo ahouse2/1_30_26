@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { buildApiUrl } from '@/config';
 
 interface Evidence {
   id: string;
@@ -24,7 +25,7 @@ export default function InCourtPresentationPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/cases');
+      const response = await fetch(buildApiUrl('/api/cases'));
       if (!response.ok) {
         throw new Error(`Failed to fetch cases: ${response.statusText}`);
       }
@@ -41,7 +42,7 @@ export default function InCourtPresentationPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/${caseId}/documents`);
+      const response = await fetch(buildApiUrl(`/${caseId}/documents`));
       if (!response.ok) {
         throw new Error(`Failed to fetch evidence: ${response.statusText}`);
       }

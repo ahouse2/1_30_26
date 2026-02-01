@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import React, { useState, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { buildApiUrl } from '@/config';
 
 export function UploadZone() {
   const [isDragging, setIsDragging] = useState(false);
@@ -57,7 +58,7 @@ export function UploadZone() {
     formData.append('document_id', documentId);
 
     try {
-      const response = await fetch('/api/ingestion', {
+      const response = await fetch(buildApiUrl('/ingestion'), {
         method: 'POST',
         body: formData,
         // You might need to implement a custom progress tracking for fetch or use a library like axios

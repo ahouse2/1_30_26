@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { buildApiUrl } from '@/config';
 
 export default function DocumentDraftingPage() {
   const [documentText, setDocumentText] = useState('');
@@ -12,7 +13,7 @@ export default function DocumentDraftingPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/agents/drafting/suggestions', {
+      const response = await fetch(buildApiUrl('/agents/drafting/suggestions'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
