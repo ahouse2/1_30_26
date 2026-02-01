@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import DocumentUploadZone from '../components/DocumentUploadZone';
+import FolderUpload from '../components/Upload/FolderUpload';
+import { uploadFolder } from '../services/document_api';
 
 interface UploadedDocument {
   doc_id: string;
@@ -9,9 +11,15 @@ interface UploadedDocument {
   pipeline_result: string[];
 }
 
+interface FolderAutomationStatus {
+  job_id: string;
+  stages: { name: string; status: string; message?: string | null }[];
+}
+
 const UploadEvidencePage: React.FC = () => {
   const [caseId, setCaseId] = useState('default-case-id'); // Placeholder for case ID
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [folderStatus, setFolderStatus] = useState<FolderAutomationStatus | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleUploadSuccess = (response: any) => {
@@ -28,6 +36,24 @@ const UploadEvidencePage: React.FC = () => {
   const handleUploadError = (error: any) => {
     console.error('Upload error:', error);
     setMessage({ type: 'error', text: `Upload failed: ${error.response?.data?.detail || error.message}` });
+  };
+
+  const handleFolderSelected = async (files: File[]) => {
+    if (files.length === 0) return;
+    try {
+      const response = await uploadFolder({ caseId, files });
+      setFolderStatus({
+        job_id: response.job_id,
+        stages: response.stages.map((stage) => ({
+          name: stage.name,
+          status: stage.status,
+          message: stage.message ?? null,
+        })),
+      });
+      setMessage({ type: 'success', text: `Folder queued for ingestion (job ${response.job_id}).` });
+    } catch (error: any) {
+      handleUploadError(error);
+    }
   };
 
   return (
@@ -56,6 +82,27 @@ const UploadEvidencePage: React.FC = () => {
         onUploadSuccess={handleUploadSuccess}
         onUploadError={handleUploadError}
       />
+
+      <div className="mt-8">
+        <h2 className="text-xl font-bold mb-2">Folder Upload</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Drag a folder to ingest everything at once and trigger the automated pipeline.
+        </p>
+        <FolderUpload onFolderSelected={handleFolderSelected} />
+        {folderStatus && (
+          <div className="mt-4 rounded-md border border-gray-200 bg-white p-4 text-sm">
+            <p className="font-medium text-gray-800">Automation job: {folderStatus.job_id}</p>
+            <ul className="mt-2 space-y-1 text-gray-600">
+              {folderStatus.stages.map((stage) => (
+                <li key={stage.name}>
+                  <span className="font-medium">{stage.name}</span>: {stage.status}
+                  {stage.message ? ` — ${stage.message}` : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
 
       <h2 className="text-xl font-bold mt-8 mb-4">Uploaded Documents</h2>
       {

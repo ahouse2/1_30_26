@@ -153,6 +153,21 @@ class HuggingFaceProviderAdapter(BaseProviderAdapter):
     display_name = "Hugging Face Inference"
 
 
+class OpenRouterProviderAdapter(BaseProviderAdapter):
+    provider_id = "openrouter"
+    display_name = "OpenRouter"
+
+
+class LocalAIProviderAdapter(BaseProviderAdapter):
+    provider_id = "localai"
+    display_name = "LocalAI"
+
+
+class LMStudioProviderAdapter(BaseProviderAdapter):
+    provider_id = "lmstudio"
+    display_name = "LM Studio"
+
+
 class OllamaProviderAdapter(BaseProviderAdapter):
     provider_id = "ollama"
     display_name = "Ollama"
@@ -175,6 +190,9 @@ ADAPTER_TYPES: Mapping[str, type[BaseProviderAdapter]] = {
         OpenAIProviderAdapter,
         AzureOpenAIProviderAdapter,
         HuggingFaceProviderAdapter,
+        OpenRouterProviderAdapter,
+        LocalAIProviderAdapter,
+        LMStudioProviderAdapter,
         OllamaProviderAdapter,
         LlamaCppProviderAdapter,
         GGUFLocalProviderAdapter,
