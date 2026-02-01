@@ -14,13 +14,21 @@ export function tryParseJsonObject(
   text: string,
   shouldThrow: boolean = false,
 ): Record<string, unknown> | null {
-  if (text && !text.startsWith("{")) {
+  const trimmed = text.trim();
+  if (trimmed && !trimmed.startsWith("{")) {
     if (shouldThrow) {
       throw new Error("Not a JSON object");
     }
     return null;
   }
-  return tryParseJson(text) as Record<string, unknown> | null;
+  const parsed = tryParseJson(trimmed);
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    return parsed;
+  }
+  if (shouldThrow) {
+    throw new Error("Not a JSON object");
+  }
+  return null;
 }
 
 /** Parse a JSON string, optionally throwing an error if it is definitively not a JSON array */
@@ -28,11 +36,19 @@ export function tryParseJsonArray(
   text: string,
   shouldThrow: boolean = false,
 ): Array<unknown> | null {
-  if (text && !text.startsWith("[")) {
+  const trimmed = text.trim();
+  if (trimmed && !trimmed.startsWith("[")) {
     if (shouldThrow) {
       throw new Error("Not a JSON array");
     }
     return null;
   }
-  return tryParseJson(text) as Array<unknown> | null;
+  const parsed = tryParseJson(trimmed);
+  if (Array.isArray(parsed)) {
+    return parsed;
+  }
+  if (shouldThrow) {
+    throw new Error("Not a JSON array");
+  }
+  return null;
 }
