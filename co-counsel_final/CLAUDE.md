@@ -53,3 +53,11 @@ You will start with a /newline above your entry. this is where your "title"
 
 
 
+
+@formatDateTime(convertFromUtc(utcnow(), 'Pacific Standard Time'), 'yyyy/MM/dd HH:mm:ss tt') Swarms Workflow Design
+- Authored the hybrid Swarms workflow design (pipeline default + modular teams) with phase registry, state deltas, and KG upserts.
+- Defined artifacts (JSON + Markdown) per phase and LlamaIndex integration points for parsing, chunking, indexing, retrieval.
+- Documented API surface and phase list in `docs/plans/2026-02-04-swarms-hybrid-workflow-design.md` and committed (df814f22).
+- Validation: not run (design-only change).
+- Notes/Next actions: proceed to implementation plan and confidence checks; address git non-monotonic pack index warning if it blocks future git ops.
+
