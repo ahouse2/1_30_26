@@ -96,6 +96,27 @@ export function Layout({ children }: LayoutProps) {
                 <span className="tab-glow" />
               </Link>
             </li>
+
+            <li>
+              <Link
+                to="/workflow"
+                className={isActive('/workflow') ? 'active' : ''}
+              >
+                <i className="fa-solid fa-diagram-predecessor" />
+                <span>Case Workflow</span>
+                <span className="tab-glow" />
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/centcom"
+                className={isActive('/centcom') ? 'active' : ''}
+              >
+                <i className="fa-solid fa-tower-observation" />
+                <span>CENTCOM</span>
+                <span className="tab-glow" />
+              </Link>
+            </li>
             <li>
               <Link
                 to="/design-system"

@@ -3,7 +3,8 @@ set -euo pipefail
 
 print_usage() {
   cat << 'USAGE'
-Usage: ./scripts/start-stack-full.sh [--seed] [--no-seed] [--data-dir <path>] [--e2e]
+Usage: ./scripts/start-stack-full.sh [--mode dev|prod] [--seed] [--no-seed] [--data-dir <path>] [--e2e]
+  --mode           Compose profile to start (dev or prod; default: prod)
   --seed           Seed the Neo4j graph with initial data (default: enabled)
   --no-seed        Do not seed the database
   --data-dir       Path to local data directory to ingest after startup
@@ -11,13 +12,15 @@ Usage: ./scripts/start-stack-full.sh [--seed] [--no-seed] [--data-dir <path>] [-
 USAGE
 }
 
+MODE="prod"
 SEED=true
 NOSEED=false
 RUN_E2E=false
-DATA_DIR=""
+DATA_DIR="EXTERNAL_DRIVE SSD/POST TRIAL DIVORCE"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --mode) MODE="$2"; shift 2 ;;
     --seed) SEED=true; shift ;;
     --no-seed) SEED=false; shift ;;
     --data-dir) DATA_DIR="$2"; shift 2 ;;
@@ -27,10 +30,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo "Starting stack via docker-compose..."
-docker-compose up -d --build
+ENV_FILE="infra/profiles/${MODE}.env"
+if [ ! -f "${ENV_FILE}" ]; then
+  echo "Profile env file not found: ${ENV_FILE}" >&2
+  exit 1
+fi
+
+echo "Starting stack via docker compose (profile: ${MODE})..."
+docker compose --env-file "${ENV_FILE}" --profile "${MODE}" up -d --build
 echo "Waiting for services to become healthy..."
-./scripts/wait-for-docker-compose.sh 600
+./scripts/wait-for-docker-compose.sh 600 --profile "${MODE}"
 
 if [ "$SEED" = true ]; then
   echo "Applying Neo4j seed data..."

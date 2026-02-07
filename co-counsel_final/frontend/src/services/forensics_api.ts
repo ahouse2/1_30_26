@@ -1,45 +1,43 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api/v1'; // Adjust if your API is hosted elsewhere
+const BASE = (() => {
+  if (typeof __API_BASE__ !== 'undefined' && __API_BASE__) {
+    return __API_BASE__ as string;
+  }
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return '';
+})();
 
-// --- Forensic Analysis Types ---
-export interface TamperScoreResult {
-  score: number;
-  details: string;
-  flags?: string[];
+function withBase(path: string): string {
+  return `${BASE}${path}`;
 }
 
-export interface ElaResult {
-  ela_score: number;
-  details: string;
-  ela_heatmap_url?: string;
+export interface ForensicsStage {
+  name: string;
+  started_at: string;
+  completed_at: string;
+  status: string;
+  notes: string[];
 }
 
-export interface CloneSplicingResult {
-  detected: boolean;
-  details: string;
-  regions?: string[];
+export interface ForensicsSignal {
+  type: string;
+  level: 'info' | 'warning' | 'error';
+  detail: string;
+  data?: Record<string, unknown>;
 }
 
-export interface FontObjectAnalysisResult {
-  inconsistencies_detected: boolean;
-  details: string;
-  anomalies?: string[];
-}
-
-export interface AntiScanAlterRescanResult {
-  detected: boolean;
-  details: string;
-}
-
-export interface ForensicAnalysisResult {
-  document_id: string;
-  tamper_score: TamperScoreResult;
-  ela_analysis?: ElaResult;
-  clone_splicing_detection?: CloneSplicingResult;
-  font_object_analysis?: FontObjectAnalysisResult;
-  anti_scan_alter_rescan?: AntiScanAlterRescanResult;
-  overall_verdict: string;
+export interface ForensicsResponse {
+  summary: string;
+  data: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  signals: ForensicsSignal[];
+  stages: ForensicsStage[];
+  fallback_applied: boolean;
+  schema_version: string;
+  generated_at?: string | null;
 }
 
 // --- Crypto Tracing Types ---
@@ -60,9 +58,34 @@ export interface Transaction {
   blockchain: string;
 }
 
+export interface ClusterAddressRef {
+  address: string;
+  chain: {
+    chain_id: number;
+    name: string;
+    family: 'evm' | 'utxo' | 'solana' | 'tron';
+  };
+  labels: string[];
+}
+
+export interface ProvenanceRecord {
+  source: string;
+  method: string;
+  confidence: number;
+  details?: Record<string, unknown>;
+}
+
+export interface ClusterResult {
+  cluster_id: string;
+  addresses: ClusterAddressRef[];
+  provenance: ProvenanceRecord[];
+}
+
 export interface CryptoTracingResult {
   wallets_found: WalletAddress[];
   transactions_traced: Transaction[];
+  clusters: ClusterResult[];
+  bridge_matches: Record<string, unknown>[];
   visual_graph_mermaid?: string;
   details: string;
 }
@@ -73,9 +96,9 @@ export const getForensicAnalysis = async (
   docType: string,
   docId: string,
   version?: string
-): Promise<ForensicAnalysisResult> => {
-  const response = await axios.get<ForensicAnalysisResult>(
-    `${API_BASE_URL}/cases/${caseId}/${docType}/${docId}/forensics`,
+): Promise<ForensicsResponse> => {
+  const response = await axios.get<ForensicsResponse>(
+    withBase(`/forensics/${caseId}/${docType}/${docId}/forensics`),
     { params: { version } }
   );
   return response.data;
@@ -88,7 +111,7 @@ export const getCryptoTracing = async (
   version?: string
 ): Promise<CryptoTracingResult> => {
   const response = await axios.get<CryptoTracingResult>(
-    `${API_BASE_URL}/cases/${caseId}/${docType}/${docId}/crypto-tracing`,
+    withBase(`/forensics/${caseId}/${docType}/${docId}/crypto-tracing`),
     { params: { version } }
   );
   return response.data;

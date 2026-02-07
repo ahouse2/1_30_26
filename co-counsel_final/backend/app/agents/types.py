@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 @dataclass(slots=True)
 class AgentTurn:
-    """Structured record of an agent turn emitted by the Microsoft Agents graph."""
+    """Structured record of an agent turn emitted by the Swarms graph."""
 
     role: str
     action: str
@@ -40,7 +40,7 @@ class AgentTurn:
 
 @dataclass(slots=True)
 class AgentThread:
-    """In-memory representation of a Microsoft Agents SDK session thread."""
+    """In-memory representation of a Swarms session thread."""
 
     thread_id: str
     case_id: str

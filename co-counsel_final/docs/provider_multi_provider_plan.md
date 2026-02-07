@@ -5,7 +5,7 @@
 - **Provider metadata:** `backend/app/providers/` includes `catalog.py` and `registry.py`, but only unit tests exercise them; Gemini remains a secondary adapter.
 - **Credentials:** `backend/app/utils/credentials.py` is a read-only JSON loader; there is no encrypted persistence or API for provider keys, CourtListener tokens, or research browser credentials.
 - **Frontend UX:** `frontend/src/components/RetrievalSettings.tsx` exposes only a precision/economy toggle with static OpenAI copy; there is no settings surface for provider selection, API keys, or theme preferences.
-- **Deployment:** Scripts (`scripts/bootstrap_full_stack.sh`, `infra/docker-compose.yml`) lack provider/model parameters, local runtime toggles, and secret wiring for multiple vendors; CI/e2e suites exercise only the OpenAI path.
+- **Deployment:** Scripts (`scripts/bootstrap_full_stack.sh`, `docker-compose.yml`) lack provider/model parameters, local runtime toggles, and secret wiring for multiple vendors; CI/e2e suites exercise only the OpenAI path.
 - **Documentation:** README and policy docs mention Gemini priority, but there is no user-facing guide for multi-provider configuration or settings management.
 
 ## Target Architecture

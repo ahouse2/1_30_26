@@ -91,7 +91,7 @@ async def apply_rate_limit(client_ip: str, endpoint: str):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many requests")
 
 @router.post("/register", response_model=User)
-async def register_user(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db), request: Request):
+async def register_user(request: Request, user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     await apply_rate_limit(request.client.host, "register")
 
     db_user = db.query(DBUser).filter(DBUser.email == user_data.username).first()
@@ -128,7 +128,7 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
     return {"message": "Email successfully verified"}
 
 @router.post("/token", response_model=Token)
-async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(get_db), request: Request):
+async def login_for_access_token(request: Request, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(get_db)):
     await apply_rate_limit(request.client.host, "token")
 
     user = await get_user(db, form_data.username)
@@ -334,7 +334,11 @@ async def read_users_me(current_user: Annotated[User, Depends(RoleChecker(["user
     return current_user
 
 @router.post("/users/", response_model=User)
-async def create_user(user_data: UserCreate, db: Session = Depends(get_db), current_user: Annotated[User, Depends(RoleChecker(["admin"]))]):
+async def create_user(
+    user_data: UserCreate,
+    current_user: Annotated[User, Depends(RoleChecker(["admin"]))],
+    db: Session = Depends(get_db),
+):
     db_user = db.query(DBUser).filter(DBUser.email == user_data.email).first()
     if db_user:
         logger.warning(f"Admin user {current_user.email} attempted to create user with existing email: {user_data.email}")

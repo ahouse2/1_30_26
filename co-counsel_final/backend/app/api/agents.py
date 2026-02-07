@@ -2,15 +2,36 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List
 
-from backend.app.agents.runner import get_orchestrator, MicrosoftAgentsOrchestrator
-from backend.app.config import LlmConfig, get_llm_config
+from backend.app.agents.runner import get_orchestrator as build_orchestrator, SwarmsOrchestrator
+from backend.app.config import get_settings
+from backend.ingestion.settings import LlmConfig, build_llm_config
 from backend.app.storage.document_store import DocumentStore
 from backend.app.forensics.analyzer import ForensicAnalyzer, get_forensic_analyzer
 from backend.app.services.knowledge_graph_service import KnowledgeGraphService, get_knowledge_graph_service
 from backend.app.agents.memory import AgentMemoryStore
-from ...agents.reasoning_engine import ReasoningEngine
+from backend.app.agents.reasoning_engine import ReasoningEngine
 
 router = APIRouter()
+
+
+def get_llm_config() -> LlmConfig:
+    return build_llm_config(get_settings())
+
+
+def get_orchestrator() -> SwarmsOrchestrator:
+    settings = get_settings()
+    llm_config = build_llm_config(settings)
+    document_store = DocumentStore(settings.document_store_dir)
+    memory_store = AgentMemoryStore(settings.agent_threads_dir)
+    forensics_service = get_forensic_analyzer()
+    knowledge_graph_service = get_knowledge_graph_service()
+    return build_orchestrator(
+        llm_config=llm_config,
+        document_store=document_store,
+        forensics_service=forensics_service,
+        knowledge_graph_service=knowledge_graph_service,
+        memory_store=memory_store,
+    )
 
 class AgentInteractionRequest(BaseModel):
     session_id: str
@@ -23,7 +44,7 @@ class AgentInteractionResponse(BaseModel):
 @router.post("/agents/invoke", response_model=AgentInteractionResponse)
 async def invoke_agent(
     request: AgentInteractionRequest,
-    orchestrator: MicrosoftAgentsOrchestrator = Depends(get_orchestrator),
+    orchestrator: SwarmsOrchestrator = Depends(get_orchestrator),
 ):
     """
     Invoke a specific agent with a prompt.

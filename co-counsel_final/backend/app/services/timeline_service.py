@@ -21,9 +21,9 @@ class TimelineService:
     """
     Manages the creation, retrieval, and modification of case timelines.
     """
-    def __init__(self):
+    def __init__(self, storage_path: Path | None = None):
         settings = get_settings()
-        self.storage_path = settings.timeline_storage_path
+        self.storage_path = storage_path or settings.timeline_storage_path
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
     def _get_timeline_path(self, case_id: str) -> Path:

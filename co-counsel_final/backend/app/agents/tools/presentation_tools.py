@@ -9,9 +9,7 @@ class TimelineTool:
     """
     def __init__(self):
         settings = get_settings()
-        # Assuming a storage path is defined in settings, similar to other services
-        timeline_storage_path = settings.timeline_path.parent if settings.timeline_path else "storage/timelines"
-        self.service = TimelineService(storage_path=timeline_storage_path)
+        self.service = TimelineService(storage_path=settings.timeline_storage_path)
 
     def add_event(self, case_id: str, event_data: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -5,6 +5,7 @@ export const sections = [
   { id: 'chat', label: 'Co-Counsel' },
   { id: 'timeline', label: 'Timeline' },
   { id: 'documents', label: 'Evidence' },
+  { id: 'court-data', label: 'Court Data' },
   { id: 'trial-university', label: 'Trial University' },
   { id: 'mock-court', label: 'Mock Trial' },
   { id: 'design-system', label: 'Design System' },

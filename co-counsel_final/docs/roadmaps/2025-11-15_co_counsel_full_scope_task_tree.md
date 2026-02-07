@@ -73,7 +73,7 @@
       - `[ ]` Letter φ — Add CI check to ensure lockfile freshness.
 - #### Paragraph 2 — Environment orchestration
   - ##### Sentence 1 — Container & Compose definitions
-    - `[ ]` Word A — Deliver `infra/docker-compose.yml` booting API, Neo4j, Qdrant, and telemetry exporters.
+    - `[ ]` Word A — Deliver `docker-compose.yml` booting API, Neo4j, Qdrant, and telemetry exporters with dev/prod profiles.
       - `[ ]` Letter χ — Publish configuration profiles for development vs staging.
       - `[ ]` Letter ψ — Validate cold start experience via smoke test script `scripts/smoke_compose.sh`. (⚙)
   - ##### Sentence 2 — Local developer experience
@@ -255,4 +255,3 @@
 - Maintain ACE trio reviews for every chapter before merge.
 - After completing each Paragraph, perform the mandated multi-pass self-review to guarantee zero known defects, aligning with craftsmanship principles.
 - Embed personal craftsmanship flourishes thoughtfully within Book III, Chapter 4 deliverables to ensure the user experience resonates with distinctive excellence.
-

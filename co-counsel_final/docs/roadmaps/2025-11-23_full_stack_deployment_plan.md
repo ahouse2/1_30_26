@@ -4,7 +4,7 @@
 - **Objective**: establish shared understanding of platform scope and deployment expectations before implementation begins.
   - Document baseline runtime topology for API, data stores, telemetry, and new audio services.
   - Confirm storage domains requiring rotation (documents, graphs, telemetry) and associated RPO/RTO targets.
-  - Catalogue environment tiers (community, pro, enterprise) and GPU acceleration permutations to drive configuration matrices.
+  - Catalogue deployment profiles (dev, prod) and GPU acceleration permutations to drive configuration matrices.
 
 ## Phase 1 — Local Orchestration Enhancements
 - **1.1 Docker Compose Extensions**
@@ -13,7 +13,7 @@
   - Embed optional GPU profiles using `deploy.resources`/`device_requests` anchors for containers that can leverage CUDA.
   - Configure scheduled volume backups with rotation policy targeting the three storage domains.
 - **1.2 Environment Profiles**
-  - Expand `infra/profiles/*.env` to surface audio endpoints, cache paths, and backup tunables per tier.
+  - Expand `infra/profiles/*.env` to surface audio endpoints, cache paths, and backup tunables per profile.
   - Ensure secrets may be overridden via user-provided environment variables without modifying committed files.
 
 ## Phase 2 — Bootstrap & Operational Tooling
@@ -38,7 +38,7 @@
   - Add GitHub Actions workflow that composes stack, runs API smoke, executes frontend Vitest suite, and tears down reliably.
 - **4.2 Documentation Updates**
   - Refresh README with professional overview, quickstart, deployment matrix summary, and references to new tooling.
-  - Author roadmap deployment matrix detailing feature coverage per tier (community vs enterprise).
+  - Author roadmap deployment matrix detailing feature coverage per profile (dev vs prod).
 
 ## Phase 5 — Governance & Stewardship
 - **5.1 Chain-of-Stewardship Entry**

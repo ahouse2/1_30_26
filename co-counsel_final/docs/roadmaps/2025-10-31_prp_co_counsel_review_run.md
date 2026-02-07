@@ -12,7 +12,7 @@
 
 ## 1. Discovery Phase
 - 1.1. Artifact Enumeration
-  - 1.1.1. Inspect `docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_spec.md`
+  - 1.1.1. Inspect `docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_Swarms_LlamaIndex_Swarms_spec.md`
   - 1.1.2. Map dependent specs (tasks, planning, execution guides)
   - 1.1.3. Catalogue backend implementation modules (`backend/app/**`)
 - 1.2. Constraint Gathering

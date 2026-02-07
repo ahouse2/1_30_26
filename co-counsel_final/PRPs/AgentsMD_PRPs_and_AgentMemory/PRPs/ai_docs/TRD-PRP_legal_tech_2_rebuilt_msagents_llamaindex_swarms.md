@@ -1,7 +1,7 @@
 # Automated Legal Discovery Co-Counsel — TRD/PRP (Rebuilt)
 
 Purpose: Rebuild “TRD-PRP_legal_tech_2.txt” using the following components and reference implementations:
-- Orchestration: Microsoft Agents Framework SDK (graph workflows, memory, telemetry)
+- Orchestration: Swarms (graph workflows, memory, telemetry)
 - Knowledge/RAG: LlamaIndex core + LlamaHub connectors; GraphRAG with Neo4j
 - Domain roles: Swarms (specialized multi-agent roles/patterns)
 - Vector store: Qdrant or Chroma (local-first), pluggable
@@ -25,7 +25,7 @@ Frontend
 - React UI (chat/voice console, timeline, evidence browser, mock court sim)
 - WebSocket streaming, token display, citations w/ deep links
 
-Agents Orchestration (Microsoft Agents Framework)
+Agents Orchestration (Swarms)
 - Workflow graph connecting agents + tools, deterministic edges, checkpoints
 - Memory: case threads + vector memory via LlamaIndex; optional Redis
 - Telemetry: OpenTelemetry spans per node, request IDs, structured logs
@@ -84,9 +84,9 @@ Swarms role schemas
 - P4: Forensics tools + enterprise hardening
 
 ## 11) Reference Code in repo
-- Microsoft Agents Framework SDK: `Reference Code/agent-framework-main` (Python)
+- Swarms: `Reference Code/swarms` (Python)
 - LlamaHub connectors: `Reference Code/llama-hub`
 - Swarms library: `swarms-master/`
 
-This TRD/PRP supersedes framework choices in older drafts and aligns implementation to MS Agents + LlamaIndex/LlamaHub + Swarms.
+This TRD/PRP supersedes framework choices in older drafts and aligns implementation to swarms + LlamaIndex/LlamaHub + Swarms.
 

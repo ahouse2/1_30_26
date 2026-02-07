@@ -1,6 +1,6 @@
 # Co-Counsel: An Advanced Agentic Legal Platform
 
-Co-Counsel is a sophisticated legal technology platform leveraging a modular agentic architecture to automate and assist with complex legal tasks. Built on the Microsoft Agents Framework SDK, it integrates specialized AI agent teams, each equipped with a suite of tools, to provide robust and reliable support across various legal domains.
+Co-Counsel is a sophisticated legal technology platform leveraging a modular agentic architecture to automate and assist with complex legal tasks. Built on the Swarms, it integrates specialized AI agent teams, each equipped with a suite of tools, to provide robust and reliable support across various legal domains.
 
 ## Features
 
@@ -19,7 +19,7 @@ Each team operates with built-in redundancy (primary/backup agents) and a three-
 
 The platform is built around a modular agentic architecture:
 
-*   **MicrosoftAgentsOrchestrator:** The central component responsible for managing agent sessions, routing user requests to the appropriate agent team, and overseeing workflow execution.
+*   **SwarmsOrchestrator:** The central component responsible for managing agent sessions, routing user requests to the appropriate agent team, and overseeing workflow execution.
 *   **Agent Teams:** Collections of specialized agents working collaboratively to achieve complex goals. Each team has a Supervisor agent, primary and backup functional agents, and dedicated QA agents.
 *   **Agents:** Individual AI entities with specific roles, descriptions, and access to specialized tools.
 *   **Tools:** Wrappers around dedicated services that enable agents to interact with external systems, perform computations, and access data (e.g., `KnowledgeGraphService`, `BlockchainService`, `DocumentProcessingService`).
@@ -30,6 +30,8 @@ This architecture ensures a clear separation of concerns, promoting modularity, 
 ## Getting Started
 
 To set up and run the Co-Counsel project locally:
+
+For a full dependency + startup reference (Docker and local dev), see `docs/SETUP_AND_START.md`.
 
 1.  **Clone the repository:**
     ```bash
@@ -59,6 +61,7 @@ To set up and run the Co-Counsel project locally:
     *   `VERIFY_PDF_ENDPOINT`, `VERIFY_PDF_API_KEY`
     *   `BLOCKCHAIN_API_KEY_ETHEREUM`, `BLOCKCHAIN_API_KEY_BITCOIN`
     *   `SQL_DATABASE_URI`
+    *   Provider API keys and base URLs can also be configured in the Settings UI (OpenRouter, LocalAI, LM Studio, Ollama, Hugging Face).
 
 5.  **Run the Application:**
     ```bash
@@ -68,7 +71,7 @@ To set up and run the Co-Counsel project locally:
 
 ## Usage
 
-Interact with the agentic system primarily through the FastAPI endpoints. The `MicrosoftAgentsOrchestrator` will route your requests to the appropriate agent team.
+Interact with the agentic system primarily through the FastAPI endpoints. The `SwarmsOrchestrator` will route your requests to the appropriate agent team.
 
 *   **API Documentation:** Access the interactive API documentation at `http://127.0.0.1:8000/docs` for available endpoints and models.
 *   **Example Interaction:**

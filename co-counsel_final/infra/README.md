@@ -11,10 +11,10 @@ This directory contains all infrastructure-as-code configurations for deploying 
 ## Directory Structure
 ```
 infra/
-├── docker-compose.yml     # Local development deployment
 ├── profiles/              # Environment-specific configurations
-│   ├── community.env     # Community deployment settings
-│   └── enterprise.env    # Enterprise deployment settings
+│   ├── dev.env           # Development deployment defaults
+│   ├── prod.env          # Production deployment defaults (full-featured)
+│   └── gpu.env           # Optional CUDA overlay (use with --env-file)
 ├── helm/                  # Helm charts for Kubernetes deployments
 │   └── full-stack/       # Complete platform Helm chart
 ├── terraform/             # Terraform modules for cloud infrastructure
@@ -59,8 +59,9 @@ terraform apply
 
 ## Environment Profiles
 
-- **Community**: Single-node deployment with local storage
-- **Enterprise**: Multi-node deployment with cloud storage and observability
+- **Dev**: Local development defaults with minimal services
+- **Prod**: Full-featured production defaults with telemetry, voice, and backups
+- **GPU overlay**: Optional CUDA enablement for services that can leverage acceleration
 
 ## Windows Deployment
 
@@ -71,6 +72,6 @@ powershell -File .\windows\scripts\install.ps1
 
 ## Monitoring and Observability
 
-- **Grafana**: http://localhost:3000 (enterprise only)
+- **Grafana**: http://localhost:3000 (prod profile only)
 - **Neo4j Browser**: http://localhost:7474
 - **Qdrant Console**: http://localhost:6333/dashboard

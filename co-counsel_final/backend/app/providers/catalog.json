@@ -456,6 +456,84 @@
       ]
     },
     {
+      "id": "openrouter",
+      "display_name": "OpenRouter",
+      "models": [
+        {
+          "id": "openrouter/auto",
+          "display_name": "OpenRouter Auto",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "chat"
+          ],
+          "context_window": 128000,
+          "availability": "aggregator"
+        }
+      ]
+    },
+    {
+      "id": "localai",
+      "display_name": "LocalAI",
+      "models": [
+        {
+          "id": "localai-chat",
+          "display_name": "LocalAI Chat (Default)",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "chat"
+          ],
+          "context_window": 8192,
+          "availability": "local-runtime"
+        },
+        {
+          "id": "localai-embed",
+          "display_name": "LocalAI Embeddings (Default)",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "embeddings"
+          ],
+          "context_window": 8192,
+          "availability": "local-runtime"
+        }
+      ]
+    },
+    {
+      "id": "lmstudio",
+      "display_name": "LM Studio",
+      "models": [
+        {
+          "id": "lmstudio-chat",
+          "display_name": "LM Studio Chat (Default)",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "chat"
+          ],
+          "context_window": 8192,
+          "availability": "local-runtime"
+        },
+        {
+          "id": "lmstudio-embed",
+          "display_name": "LM Studio Embeddings (Default)",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "embeddings"
+          ],
+          "context_window": 8192,
+          "availability": "local-runtime"
+        }
+      ]
+    },
+    {
       "id": "ollama",
       "display_name": "Ollama",
       "models": [

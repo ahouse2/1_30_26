@@ -16,7 +16,7 @@ class AgentDefinition:
 
 
 def build_agent_graph(tools: Dict[str, AgentTool]) -> List[AgentDefinition]:
-    """Translate TRD personas into Microsoft Agents SDK definitions."""
+    """Translate TRD personas into Swarms definitions."""
 
     return [
         AgentDefinition(

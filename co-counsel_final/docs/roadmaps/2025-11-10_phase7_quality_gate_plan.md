@@ -37,7 +37,7 @@
 - ### 3.3 Dependency Governance
   - #### 3.3.a Add `coverage==7.6.4` to `backend/requirements.txt`, keeping alphabetical grouping.
 - ### 3.4 Documentation & Task Alignment
-  - #### 3.4.a Update `docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_tasks.md` Phase 7 checklist to reflect automated unit coverage gate progress (mark Unit Coverage item complete, add note referencing new tool).
+  - #### 3.4.a Update `docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_Swarms_LlamaIndex_Swarms_tasks.md` Phase 7 checklist to reflect automated unit coverage gate progress (mark Unit Coverage item complete, add note referencing new tool).
   - #### 3.4.b Author validation memo `docs/validation/2025-11-10_quality_gate_run.md` capturing metrics + usage instructions.
 - ### 3.5 Stewardship Artefacts
   - #### 3.5.a Record execution narrative in `build_logs/2025-11-10.md` (inputs, commands, outcomes).

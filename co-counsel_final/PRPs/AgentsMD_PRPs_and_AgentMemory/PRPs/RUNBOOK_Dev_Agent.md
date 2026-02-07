@@ -1,7 +1,7 @@
 # Dev Agent Runbook — Feature Backlog Stewardship
 
 ## 1. Mission Profile
-- **Objective:** Continuously triage feature requests, translate them into improvement tasks, and deliver validated patch proposals through Microsoft Agents Planner/Executor personas.
+- **Objective:** Continuously triage feature requests, translate them into improvement tasks, and deliver validated patch proposals through Swarms Planner/Executor personas.
 - **Data Stores:** `AgentMemoryStore` namespaces `threads/` and `improvement_tasks/` with ISO-8601 timestamps and hash-chained audit events.
 - **Execution Harness:** `agents.toolkit.sandbox.SandboxExecutionHarness` clones the repo, applies diffs via `git apply --whitespace=nowarn`, and runs configurable lint/test commands.
 

@@ -53,7 +53,7 @@ This plan is organized chronologically to address the most critical issues first
         *   **Frontend:** Refactor the main `frontend/src/App.tsx` component to delegate state and logic to smaller, more focused components or custom hooks.
 *   **Task 5: Enhance Testing Coverage.**
     *   **Action:** Increase test coverage for critical and complex areas.
-        *   **Backend:** Write integration tests for the `MicrosoftAgentsOrchestrator` to validate different agent sequences and failure modes.
+        *   **Backend:** Write integration tests for the `SwarmsOrchestrator` to validate different agent sequences and failure modes.
         *   **Frontend:** Implement end-to-end tests for core user workflows using a framework like Playwright or Cypress. This should include the evidence upload process and interaction with the 3D graph.
         *   **Legal:** Create a suite of validation tests based on real-world legal discovery scenarios to ensure the output is accurate and reliable.
 *   **Task 6: Integrate Frontend Components with Backend Data.**
@@ -77,6 +77,6 @@ This plan is organized chronologically to address the most critical issues first
 *   **Task 10: Create a "Golden Path" E2E Test Suite.**
     *   **Action:** Develop a comprehensive end-to-end test suite that simulates a complete user journey, from case creation and evidence ingestion to discovery, analysis, and mock trial preparation. This suite should run nightly.
 *   **Task 11: Refine the Agentic System's Resilience.**
-    *   **Action:** Improve the error handling and retry logic within the `MicrosoftAgentsOrchestrator`. Implement strategies for graceful degradation when a sub-agent fails.
+    *   **Action:** Improve the error handling and retry logic within the `SwarmsOrchestrator`. Implement strategies for graceful degradation when a sub-agent fails.
 *   **Task 12: Streamline GPU Environment Setup.**
     *   **Action:** Create a dedicated script or guide to simplify the setup of a local GPU-accelerated development environment. This could involve a dedicated Docker Compose profile or a more detailed section in the `README`.

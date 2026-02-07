@@ -3,7 +3,7 @@
 ## Scope & Methodology
 
 - Reviewed repository structure, backend services, agent orchestration, knowledge pipelines, frontend UI, infrastructure assets, and prior build logs.
-- Cross-referenced the current implementation against the authoritative TRD/PRP to verify intentional deviations (e.g., dark cinematic UI palette, Microsoft Agent framework adoption) and to surface residual gaps.【F:new_TRD-PRP.md†L1-L200】【F:frontend/src/App.tsx†L1-L116】【F:backend/app/services/agents.py†L1-L200】
+- Cross-referenced the current implementation against the authoritative TRD/PRP to verify intentional deviations (e.g., dark cinematic UI palette, Swarms framework adoption) and to surface residual gaps.【F:new_TRD-PRP.md†L1-L200】【F:frontend/src/App.tsx†L1-L116】【F:backend/app/services/agents.py†L1-L200】
 - Evaluated business-readiness against the target of a $1000/month enterprise-grade legal tech product.
 
 ## Rubric (0–10 per category)
@@ -12,13 +12,13 @@
 |---|----------|:-----:|----------------------|
 | 1 | Product Vision Alignment | 9 | Core pillars from the TRD—GraphRAG ingestion, immersive neon UX, emotionally aware co-counsel—are represented across backend, voice, and UI layers, with only minor backlog items outstanding.【F:new_TRD-PRP.md†L1-L116】【F:backend/app/services/ingestion.py†L1-L120】【F:frontend/src/App.tsx†L1-L116】 |
 | 2 | Architecture & Modularity | 9 | FastAPI service exposes comprehensive endpoints with modular dependency injection, GraphQL, MTLS middleware, and telemetry bootstrap, matching enterprise expectations.【F:backend/app/main.py†L1-L120】 |
-| 3 | Multi-Agent Orchestration | 8 | Microsoft Agents orchestrator with adaptive policy engine, telemetry counters, and guardrails is implemented, but resilience for extreme edge cases still requires stress validation.【F:backend/app/services/agents.py†L1-L200】 |
+| 3 | Multi-Agent Orchestration | 8 | Swarms orchestrator with adaptive policy engine, telemetry counters, and guardrails is implemented, but resilience for extreme edge cases still requires stress validation.【F:backend/app/services/agents.py†L1-L200】 |
 | 4 | Knowledge & Retrieval Pipeline | 8 | Ingestion service fuses OCR, credentialed loaders, timeline enrichment, and vector/graph persistence, yet CI coverage remains blocked by missing JWT dependency.【F:backend/app/services/ingestion.py†L1-L120】【F:build_logs/2025-11-25_ingestion_pipeline.md†L1-L13】 |
 | 5 | Scenario & Simulation Experience | 9 | Frontend shells include cinematic timeline, mock trial arena, dev team workspace, and neon thematic flourishes that align with the spec’s experiential vision.【F:frontend/src/App.tsx†L1-L116】 |
 | 6 | Security & Compliance | 8 | MTLS middleware, granular authorization dependencies, and audit trail integration exist, but automated dependency hardening/tests for auth packages remain pending.【F:backend/app/main.py†L71-L120】【F:build_logs/2025-11-25_ingestion_pipeline.md†L9-L13】 |
 | 7 | Observability & Telemetry | 9 | Extensive OpenTelemetry counters/histograms across agent orchestration and ingestion lifecycle support deep insights for enterprise SLAs.【F:backend/app/services/agents.py†L39-L200】【F:backend/app/services/ingestion.py†L57-L120】 |
 | 8 | Testing & Quality Coverage | 6 | Rich regression suites exist, but repeated CI failures due to unresolved PyJWT dependency degrade confidence and block automated validation pathways.【F:build_logs/2025-11-25_ingestion_pipeline.md†L1-L13】 |
-| 9 | DevOps & Deployment | 8 | Docker Compose bundles GPU-ready services, knowledge stores, and observability sidecars; new Windows installer closes desktop gap but still depends on manual environment prerequisites (winget).【F:infra/docker-compose.yml†L1-L120】【F:infra/windows/scripts/install.ps1†L1-L200】 |
+| 9 | DevOps & Deployment | 8 | Docker Compose bundles GPU-ready services, knowledge stores, and observability sidecars; new Windows installer closes desktop gap but still depends on manual environment prerequisites (winget).【F:docker-compose.yml†L1-L220】【F:infra/windows/scripts/install.ps1†L1-L200】 |
 |10 | Voice & Multimodal Experience | 8 | Whisper/Coqui stack with emotion controller is present; packaging script provisions dependencies but real-time monitoring and fallback voices need production burn-in.【F:new_TRD-PRP.md†L130-L200】【F:infra/windows/scripts/install.ps1†L125-L200】 |
 |11 | Documentation & Onboarding | 9 | Comprehensive TRDs, roadmaps, and new Windows installer README provide actionable guidance for teams and customers.【F:new_TRD-PRP.md†L1-L200】【F:infra/windows/README.md†L1-L68】 |
 |12 | Business & Monetization Readiness | 8 | Billing APIs, plan catalogs, and usage telemetry exist, but pricing/packaging assumptions require validation with the new installer funnel.【F:backend/app/main.py†L25-L70】【F:infra/windows/README.md†L1-L68】 |
@@ -28,9 +28,9 @@
 
 ## Key Findings
 
-1. **Spec alignment is strong.** Dark neon UI, multi-agent orchestration, and GraphRAG ingestion mirror the TRD’s priorities with the deliberate shift to Microsoft’s agent framework already in place.【F:new_TRD-PRP.md†L1-L200】【F:backend/app/services/agents.py†L1-L200】
+1. **Spec alignment is strong.** Dark neon UI, multi-agent orchestration, and GraphRAG ingestion mirror the TRD’s priorities with the deliberate shift to Swarms framework already in place.【F:new_TRD-PRP.md†L1-L200】【F:backend/app/services/agents.py†L1-L200】
 2. **Operational bottleneck: PyJWT gap.** Multiple suites remain red because the shared backend runtime lacks the `jwt` dependency, threatening regression fidelity and enterprise trust.【F:build_logs/2025-11-25_ingestion_pipeline.md†L1-L13】
-3. **Deployment story is now multi-surface.** Existing Docker/Helm assets cover cloud rollouts and the new Windows bootstrapper brings a true “one click” desktop path, though offline environments will still need signed executables and driver packaging.【F:infra/docker-compose.yml†L1-L120】【F:infra/windows/scripts/install.ps1†L1-L200】
+3. **Deployment story is now multi-surface.** Existing Docker/Helm assets cover cloud rollouts and the new Windows bootstrapper brings a true “one click” desktop path, though offline environments will still need signed executables and driver packaging.【F:docker-compose.yml†L1-L220】【F:infra/windows/scripts/install.ps1†L1-L200】
 
 ## Path to a “20/10” Experience
 
@@ -67,7 +67,7 @@ graph TD
     B --> C{Ontology Resolver}
     C -->|Augmented Graph| D[Knowledge Store]
     D --> E[Retrieval Service]
-    E -->|Context Bundles| F[Microsoft Agents Orchestrator]
+    E -->|Context Bundles| F[Swarms Orchestrator]
     F --> G[Co-Counsel UX]
 ```
 

@@ -16,6 +16,6 @@ def get_strategic_recommendations(
     query: str,
     _principal: Principal = Depends(authorize_query),
     service: RetrievalService = Depends(get_retrieval_service),
-    mode: RetrievalMode = Query(RetrievalMode.SEMANTIC, description="Retrieval mode"),
+    mode: RetrievalMode = Query(RetrievalMode.PRECISION, description="Retrieval mode"),
 ) -> QueryResponse:
     return service.query(query, mode)

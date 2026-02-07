@@ -356,6 +356,52 @@ MODEL_CATALOG: Mapping[str, Tuple[ModelInfo, ...]] = {
             availability="hosted-api",
         ),
     ),
+    "openrouter": (
+        ModelInfo(
+            model_id="openrouter/auto",
+            display_name="OpenRouter Auto",
+            context_window=128_000,
+            modalities=("text",),
+            capabilities=(ProviderCapability.CHAT,),
+            availability="aggregator",
+        ),
+    ),
+    "localai": (
+        ModelInfo(
+            model_id="localai-chat",
+            display_name="LocalAI Chat (Default)",
+            context_window=8_192,
+            modalities=("text",),
+            capabilities=(ProviderCapability.CHAT,),
+            availability="local-runtime",
+        ),
+        ModelInfo(
+            model_id="localai-embed",
+            display_name="LocalAI Embeddings (Default)",
+            context_window=8_192,
+            modalities=("text",),
+            capabilities=(ProviderCapability.EMBEDDINGS,),
+            availability="local-runtime",
+        ),
+    ),
+    "lmstudio": (
+        ModelInfo(
+            model_id="lmstudio-chat",
+            display_name="LM Studio Chat (Default)",
+            context_window=8_192,
+            modalities=("text",),
+            capabilities=(ProviderCapability.CHAT,),
+            availability="local-runtime",
+        ),
+        ModelInfo(
+            model_id="lmstudio-embed",
+            display_name="LM Studio Embeddings (Default)",
+            context_window=8_192,
+            modalities=("text",),
+            capabilities=(ProviderCapability.EMBEDDINGS,),
+            availability="local-runtime",
+        ),
+    ),
     "ollama": (
         ModelInfo(
             model_id="llama3.1",

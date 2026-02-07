@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Literal, Optional
@@ -27,6 +28,10 @@ class Settings(BaseSettings):
             "azure-openai": "https://{resource-name}.openai.azure.com",
             "gemini": "https://generativelanguage.googleapis.com/v1beta",
             "huggingface": "https://api-inference.huggingface.co/models",
+            "openrouter": "https://openrouter.ai/api/v1",
+            "localai": "http://localhost:8080/v1",
+            "lmstudio": "http://localhost:1234/v1",
+            "ollama": "http://localhost:11434",
         }
     )
     provider_local_runtime_paths: Dict[str, Path] = Field(
@@ -51,11 +56,14 @@ class Settings(BaseSettings):
     ingestion_llama_cache_dir: Path = Field(default=Path("storage/llama_cache"))
     forensics_dir: Path = Field(default=Path("storage/forensics"))
     forensics_chain_path: Path = Field(default=Path("storage/forensics_chain/ledger.jsonl"))
+    court_payment_ledger_path: Path = Field(default=Path("storage/court_payments/ledger.jsonl"))
+    evidence_binder_path: Path = Field(default=Path("storage/evidence_binders"))
     timeline_path: Path = Field(default=Path("storage/timeline.jsonl"))
     job_store_dir: Path = Field(default=Path("storage/jobs"))
     encryption_key: str = Field(default="a_very_secret_key_for_document_encryption_32_bytes_long", min_length=32) # Added
     document_storage_path: Path = Field(default=Path("storage/documents")) # Renamed from document_store_dir for clarity
     ingestion_workspace_dir: Path = Field(default=Path("storage/workspaces"))
+    workflow_storage_path: Path = Field(default=Path("storage/workflows"))
     agent_threads_dir: Path = Field(default=Path("storage/agent_threads"))
     agent_retry_attempts: int = Field(default=3, ge=1)
     agent_retry_backoff_ms: int = Field(default=0, ge=0)
@@ -98,6 +106,11 @@ class Settings(BaseSettings):
     knowledge_catalog_path: Path = Field(default=Path("docs/knowledge/catalog.json"))
     knowledge_content_dir: Path = Field(default=Path("docs/knowledge/best_practices"))
     knowledge_progress_path: Path = Field(default=Path("storage/knowledge/progress.json"))
+
+    graph_refinement_enabled: bool = Field(default=True)
+    graph_refinement_interval_seconds: float = Field(default=900.0, ge=60.0)
+    graph_refinement_idle_limit: int = Field(default=3, ge=1)
+    graph_refinement_min_new_edges: int = Field(default=0, ge=0)
 
     privilege_classifier_threshold: float = Field(default=0.68)
     privilege_policy_review_threshold: float = Field(default=0.68)
@@ -244,6 +257,9 @@ class Settings(BaseSettings):
         default="https://www.courtlistener.com/api/rest/v3/opinions/"
     )
     courtlistener_token: Optional[str] = Field(default=None)
+    pacer_endpoint: Optional[str] = Field(default=None)
+    unicourt_endpoint: Optional[str] = Field(default=None)
+    lacs_endpoint: Optional[str] = Field(default=None)
     caselaw_endpoint: str = Field(default="https://api.case.law/v1/cases/")
     caselaw_api_key: Optional[str] = Field(default=None)
     caselaw_max_results: int = Field(default=10, ge=0, le=100)
@@ -270,10 +286,13 @@ class Settings(BaseSettings):
             self.ingestion_hf_cache_dir.mkdir(parents=True, exist_ok=True)
         self.forensics_dir.mkdir(parents=True, exist_ok=True)
         self.forensics_chain_path.parent.mkdir(parents=True, exist_ok=True)
+        self.court_payment_ledger_path.parent.mkdir(parents=True, exist_ok=True)
+        self.evidence_binder_path.mkdir(parents=True, exist_ok=True)
         self.timeline_storage_path.mkdir(parents=True, exist_ok=True) # Updated for TimelineService
         self.job_store_dir.mkdir(parents=True, exist_ok=True)
         self.document_storage_path.mkdir(parents=True, exist_ok=True) # Updated
         self.ingestion_workspace_dir.mkdir(parents=True, exist_ok=True)
+        self.workflow_storage_path.mkdir(parents=True, exist_ok=True)
         self.agent_threads_dir.mkdir(parents=True, exist_ok=True)
         self.audit_log_path.parent.mkdir(parents=True, exist_ok=True)
         self.billing_usage_path.parent.mkdir(parents=True, exist_ok=True)

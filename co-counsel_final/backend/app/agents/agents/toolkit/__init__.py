@@ -1,5 +1,23 @@
-from .evaluation import CaseEvaluationResult, EvaluationHarness, EvaluationSuiteResult
-from .fixtures import FixtureCase, FixtureDocument, FixtureSet
+__all__ = []
+
+try:  # pragma: no cover - optional evaluation suite
+    from .evaluation import CaseEvaluationResult, EvaluationHarness, EvaluationSuiteResult
+except Exception:  # pragma: no cover - allow slim installs
+    CaseEvaluationResult = None  # type: ignore[assignment]
+    EvaluationHarness = None  # type: ignore[assignment]
+    EvaluationSuiteResult = None  # type: ignore[assignment]
+else:
+    __all__.extend(["CaseEvaluationResult", "EvaluationHarness", "EvaluationSuiteResult"])
+
+try:  # pragma: no cover - optional fixtures
+    from .fixtures import FixtureCase, FixtureDocument, FixtureSet
+except Exception:  # pragma: no cover - allow slim installs
+    FixtureCase = None  # type: ignore[assignment]
+    FixtureDocument = None  # type: ignore[assignment]
+    FixtureSet = None  # type: ignore[assignment]
+else:
+    __all__.extend(["FixtureCase", "FixtureDocument", "FixtureSet"])
+
 from .prompt_packs import PromptMessage, PromptPack, PromptTemplate
 from .sandbox import (
     SandboxCommandResult,
@@ -7,34 +25,18 @@ from .sandbox import (
     SandboxExecutionHarness,
     SandboxExecutionResult,
 )
-from .graph_explorer import (
-    build_text_to_cypher_prompt,
-    community_overview,
-    describe_graph_schema,
-    run_cypher,
-    text_to_cypher,
-)
 
-__all__ = [
-    "CaseEvaluationResult",
-    "EvaluationHarness",
-    "EvaluationSuiteResult",
-    "FixtureCase",
-    "FixtureDocument",
-    "FixtureSet",
-    "PromptMessage",
-    "PromptPack",
-    "PromptTemplate",
-    "SandboxCommandResult",
-    "SandboxExecutionError",
-    "SandboxExecutionHarness",
-    "SandboxExecutionResult",
-    "build_text_to_cypher_prompt",
-    "community_overview",
-    "describe_graph_schema",
-    "run_cypher",
-    "text_to_cypher",
-]
+__all__.extend(
+    [
+        "PromptMessage",
+        "PromptPack",
+        "PromptTemplate",
+        "SandboxCommandResult",
+        "SandboxExecutionError",
+        "SandboxExecutionHarness",
+        "SandboxExecutionResult",
+    ]
+)
 
 try:  # pragma: no cover - optional graph explorer dependencies
     from .graph_explorer import (

@@ -23,6 +23,7 @@ The Co-Counsel application relies on environment variables for its configuration
     *   **Database Credentials:** `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, and `SQL_DATABASE_URI`.
     *   **External API Keys:** `COURTLISTENER_TOKEN`, `CASELAW_API_KEY`, `GOVINFO_API_KEY`, `BLOCKCHAIN_API_KEY_ETHEREUM`, `BLOCKCHAIN_API_KEY_BITCOIN`, `VERIFY_PDF_API_KEY`, etc.
     *   **Security Keys:** `ENCRYPTION_KEY`, `SECRET_KEY`.
+    *   **Provider Keys and Base URLs:** Configure OpenRouter, LocalAI, LM Studio, Ollama, and Hugging Face via the Settings UI (recommended) or update the provider base URLs in `backend/app/config.py`.
 
     **Example `.env` content (minimal):**
     ```env

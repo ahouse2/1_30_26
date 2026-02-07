@@ -2,7 +2,7 @@
 
 ## Phase A — Packaging & Deployment Profiles
 - ### A1 — Asset audit & prerequisites
-  - Enumerate existing infra artifacts (docker-compose base file, bootstrap scripts).
+  - Enumerate deployment artifacts (root `docker-compose.yml`, bootstrap scripts).
   - Identify environment variables required for billing, telemetry, and customer success services.
 - ### A2 — Tiered configuration architecture
   - Define community/pro/enterprise tiers with shared base compose file + override profiles.

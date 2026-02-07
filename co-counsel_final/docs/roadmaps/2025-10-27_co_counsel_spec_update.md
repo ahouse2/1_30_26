@@ -13,7 +13,7 @@ Ensure the Co-Counsel API spec communicates machine-validated schemas, lifecycle
 ## Phase A — Reconnaissance
 ### A.1 Artifact Survey
 #### A.1.a Source Enumeration
-1. Inspect `docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_spec.md` for existing bullet structures.
+1. Inspect `docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_Swarms_LlamaIndex_Swarms_spec.md` for existing bullet structures.
 2. Cross-reference implemented Pydantic models in `backend/app/models/api.py`.
 #### A.1.b Gap Identification
 1. Note absence of explicit pagination/filter documentation.

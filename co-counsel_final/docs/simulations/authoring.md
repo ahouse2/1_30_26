@@ -16,7 +16,7 @@
 - Use `${variable}` placeholders inside scripted beats; dynamic beats call Agents SDK delegates defined in the beat metadata.
 
 ### 2.2 Dynamic Prompts
-- Dynamic beats supply `delegate` identifiers that map to Agents orchestrations. The Scenario Engine expands variables/evidence and invokes delegates through the Microsoft Agents SDK adapter, seeded by the `case_id` and participant roster.
+- Dynamic beats supply `delegate` identifiers that map to Agents orchestrations. The Scenario Engine expands variables/evidence and invokes delegates through the Swarms adapter, seeded by the `case_id` and participant roster.
 - Provide deterministic seeds (set `seed` per beat if reproducibility required) and guard `top_k` for retrieval fan-out.
 
 ### 2.3 Persistence & Telemetry

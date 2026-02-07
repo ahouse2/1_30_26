@@ -15,6 +15,9 @@ import {
   ScenarioRunResponse,
   TextToSpeechResponsePayload,
   TimelineResponse,
+  TimelineExportFormat,
+  TimelineExportResponse,
+  StoryboardResponse,
   VoicePersona,
   VoiceSession,
   VoiceSessionResponse,
@@ -190,6 +193,25 @@ export async function fetchModelCatalog(): Promise<ProviderCatalogEntry[]> {
   return payload.providers;
 }
 
+export async function refreshModelCatalog(providerId: string): Promise<ProviderCatalogEntry[]> {
+  const response = await fetch(withBase('/settings/models/refresh'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider_id: providerId }),
+  });
+  if (response.status === 401 || response.status === 403) {
+    throw new HttpError('Model catalog refresh denied.', response.status, await readErrorDetail(response));
+  }
+  if (response.status === 422) {
+    throw new HttpError('Model catalog refresh failed.', response.status, await readErrorDetail(response));
+  }
+  if (!response.ok) {
+    throw new HttpError('Failed to refresh model catalog.', response.status, await readErrorDetail(response));
+  }
+  const payload = (await response.json()) as { providers: ProviderCatalogEntry[] };
+  return payload.providers;
+}
+
 export async function submitOnboarding(
   payload: OnboardingSubmissionPayload
 ): Promise<OnboardingSubmissionResponse> {
@@ -233,6 +255,48 @@ export async function fetchTimeline(
     throw new Error(`Timeline request failed with status ${response.status}`);
   }
   return (await response.json()) as TimelineResponse;
+}
+
+export async function exportTimeline(payload: {
+  format: TimelineExportFormat;
+  case_id?: string | null;
+  entity?: string | null;
+  from_ts?: string | null;
+  to_ts?: string | null;
+  risk_band?: 'low' | 'medium' | 'high' | null;
+  motion_due_before?: string | null;
+  motion_due_after?: string | null;
+  storyboard?: boolean;
+}): Promise<TimelineExportResponse> {
+  const response = await fetch(withBase('/timeline/export'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`Timeline export failed (${response.status})`);
+  }
+  return (await response.json()) as TimelineExportResponse;
+}
+
+export async function fetchStoryboard(
+  params: {
+    cursor?: string | null;
+    limit?: number;
+    entity?: string | null;
+    risk_band?: 'low' | 'medium' | 'high' | null;
+  } = {}
+): Promise<StoryboardResponse> {
+  const search = new URLSearchParams();
+  if (params.cursor) search.set('cursor', params.cursor);
+  if (params.entity) search.set('entity', params.entity);
+  if (params.risk_band) search.set('risk_band', params.risk_band);
+  if (typeof params.limit === 'number') search.set('limit', String(params.limit));
+  const response = await fetch(withBase(`/timeline/storyboard?${search.toString()}`));
+  if (!response.ok) {
+    throw new Error(`Storyboard request failed (${response.status})`);
+  }
+  return (await response.json()) as StoryboardResponse;
 }
 
 export async function fetchDevAgentBacklog(): Promise<DevAgentProposalListResponse> {

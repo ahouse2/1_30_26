@@ -37,6 +37,11 @@ ComponentExecutor = Callable[
     Tuple[AgentTurn, Dict[str, object]],
 ]
 
+try:  # Optional Swarms dependency
+    from swarms import Agent as SwarmsAgent  # type: ignore
+except Exception:  # pragma: no cover - Swarms optional in local/dev
+    SwarmsAgent = None  # type: ignore
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -46,11 +51,40 @@ def _utcnow() -> datetime:
 class SessionNode:
     definition: AgentDefinition
     next_roles: List[str]
+    agent: "SwarmsToolAgent | None" = None
+
+
+class SwarmsToolAgent:
+    """Adapter that exposes a Swarms-style agent interface for AgentTool execution."""
+
+    def __init__(self, definition: AgentDefinition) -> None:
+        self.definition = definition
+        self.agent_name = definition.name
+        self.role = definition.role
+        self.description = definition.description
+        self._swarms_agent = self._build_swarms_agent(definition)
+
+    def _build_swarms_agent(self, definition: AgentDefinition) -> object | None:
+        if SwarmsAgent is None:
+            return None
+        try:
+            return SwarmsAgent(
+                agent_name=definition.name,
+                system_prompt=definition.description,
+                model_name="gpt-4o-mini",
+                max_loops=1,
+                interactive=False,
+            )
+        except Exception:
+            return None
+
+    def run(self, context: AgentContext) -> ToolInvocation:
+        return self.definition.tool.invoke(context)
 
 
 @dataclass(slots=True)
 class SessionGraph:
-    """Directed conversation graph for Microsoft Agents sessions."""
+    """Directed conversation graph for Swarms sessions."""
 
     nodes: Dict[str, SessionNode]
     entry_role: str
@@ -70,7 +104,11 @@ class SessionGraph:
                 role = name_to_role.get(delegate, delegate.lower())
                 downstream.append(role)
             adjacency[definition.role] = downstream
-            nodes[definition.role] = SessionNode(definition=definition, next_roles=downstream)
+            nodes[definition.role] = SessionNode(
+                definition=definition,
+                next_roles=downstream,
+                agent=SwarmsToolAgent(definition),
+            )
         entry = definitions_list[0].role
         order: List[str] = []
         visited = set()
@@ -86,8 +124,8 @@ class SessionGraph:
 
 
 @dataclass(slots=True)
-class MicrosoftAgentsSession:
-    """Session runner that executes the Microsoft Agents SDK graph."""
+class SwarmsSession:
+    """Session runner that executes the Swarms graph."""
 
     graph: SessionGraph
     memory: CaseThreadMemory
@@ -304,7 +342,10 @@ class MicrosoftAgentsSession:
 
         def operation() -> Tuple[AgentTurn, Dict[str, object]]:
             nonlocal invocation
-            invocation = node.definition.tool.invoke(context)
+            if node.agent is not None:
+                invocation = node.agent.run(context)
+            else:
+                invocation = node.definition.tool.invoke(context)
             turn = invocation.turn
             if revision:
                 turn.annotations.setdefault("plan_revision", revision)
@@ -421,8 +462,8 @@ from backend.app.agents.teams.software_development import build_software_develop
 from backend.app.agents.teams.ai_qa_oversight import build_ai_qa_oversight_committee
 
 @dataclass(slots=True)
-class MicrosoftAgentsOrchestrator:
-    """Adaptive orchestrator implemented with the Microsoft Agents SDK graph."""
+class SwarmsOrchestrator:
+    """Adaptive orchestrator implemented with the Swarms graph."""
 
     strategy_tool: StrategyTool
     ingestion_tool: IngestionTool
@@ -434,6 +475,7 @@ class MicrosoftAgentsOrchestrator:
     qa_agent: QAAgent | None = None
     max_rounds: int = 12
     tools: Dict[str, AgentTool] = field(init=False)
+    agents: Dict[str, SwarmsToolAgent] = field(init=False)
     graph: SessionGraph = field(init=False)
     base_definitions: List[AgentDefinition] = field(init=False, repr=False)
     forensics_team: List[AgentDefinition] = field(init=False, repr=False)
@@ -473,6 +515,11 @@ class MicrosoftAgentsOrchestrator:
             + self.ai_qa_oversight_committee
         )
         self.graph = SessionGraph.from_definitions(all_definitions)
+        self.agents = {
+            node.definition.name: node.agent
+            for node in self.graph.nodes.values()
+            if node.agent is not None
+        }
 
     def run(
         self,
@@ -517,7 +564,7 @@ class MicrosoftAgentsOrchestrator:
             memory=memory,
             telemetry=telemetry,
         )
-        session = MicrosoftAgentsSession(
+        session = SwarmsSession(
             graph=session_graph,
             memory=memory,
             telemetry=telemetry,
@@ -528,6 +575,31 @@ class MicrosoftAgentsOrchestrator:
             policy_state=policy_state,
         )
         return session.execute(context, thread)
+
+    def get_session(self, session_id: str) -> "SwarmsSessionHandle":
+        return SwarmsSessionHandle(orchestrator=self, session_id=session_id)
+
+    def invoke_agent(self, *, session_id: str, agent_name: str, prompt: str) -> ToolInvocation:
+        agent = self.agents.get(agent_name)
+        if agent is None:
+            raise ValueError(f"Agent '{agent_name}' not found.")
+        thread = AgentThread(
+            thread_id=session_id,
+            case_id=session_id,
+            question=prompt,
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
+        )
+        memory = CaseThreadMemory(thread, self.memory_store, state={})
+        context = AgentContext(
+            case_id=session_id,
+            question=prompt,
+            top_k=8,
+            actor={"name": "api"},
+            memory=memory,
+            telemetry={},
+        )
+        return agent.run(context)
 
     def _select_team_graph(self, question: str) -> Optional[SessionGraph]:
         """
@@ -590,6 +662,19 @@ class MicrosoftAgentsOrchestrator:
         return {"allow_replan": True, "allow_partial": True}
 
 
+@dataclass(slots=True)
+class SwarmsSessionHandle:
+    orchestrator: SwarmsOrchestrator
+    session_id: str
+
+    async def invoke(self, *, agent_name: str, prompt: str) -> ToolInvocation:
+        return self.orchestrator.invoke_agent(
+            session_id=self.session_id,
+            agent_name=agent_name,
+            prompt=prompt,
+        )
+
+
 from backend.app.agents.echo_tool import EchoTool
 from backend.app.agents.tools.forensic_tools import (
     PDFAuthenticatorTool,
@@ -618,8 +703,8 @@ def get_orchestrator(
     forensics_service: ForensicAnalyzer,
     knowledge_graph_service: KnowledgeGraphService,
     memory_store: AgentMemoryStore,
-) -> MicrosoftAgentsOrchestrator:
-    """Get the default Microsoft Agents orchestrator."""
+) -> SwarmsOrchestrator:
+    """Get the default Swarms orchestrator."""
     llm_service = build_llm_service(llm_config)
     graph_agent = build_graph_rag_agent(llm_service, document_store)
     qa_agent = build_qa_agent(llm_service)
@@ -651,7 +736,7 @@ def get_orchestrator(
     refinement_qa_tool = RefinementQATool()
 
 
-    return MicrosoftAgentsOrchestrator(
+    return SwarmsOrchestrator(
         strategy_tool=StrategyTool(graph_agent=graph_agent),
         ingestion_tool=IngestionTool(document_store=document_store),
         research_tool=ResearchTool(graph_agent=graph_agent),
@@ -666,6 +751,6 @@ def get_orchestrator(
         # This part needs to be carefully managed as the orchestrator's __init__
         # doesn't currently accept an arbitrary list of tools.
         # For now, we'll assume the tools are accessible globally or through a tool registry.
-        # A more robust solution would involve modifying MicrosoftAgentsOrchestrator's __init__
+        # A more robust solution would involve modifying SwarmsOrchestrator's __init__
         # to accept a list of tools or a tool registry.
     )

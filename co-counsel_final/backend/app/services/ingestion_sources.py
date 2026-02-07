@@ -33,6 +33,70 @@ class MaterializedSource:
     origin: str | None = None
 
 
+class DigestCache:
+    def __init__(self, base_dir: Path, *, suffix: str = ".json") -> None:
+        self.base_dir = Path(base_dir)
+        self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.suffix = suffix
+
+    def path_for(self, digest: str) -> Path:
+        return self.base_dir / f"{digest}{self.suffix}"
+
+    def exists(self, digest: str) -> bool:
+        return self.path_for(digest).exists()
+
+    def store(self, digest: str, payload: bytes) -> Path:
+        path = self.path_for(digest)
+        if path.exists():
+            return path
+        tmp_path = path.with_suffix(path.suffix + ".tmp")
+        tmp_path.write_bytes(payload)
+        tmp_path.replace(path)
+        return path
+
+    def copy(self, digest: str, destination: Path) -> Path:
+        source = self.path_for(digest)
+        if not source.exists():
+            raise FileNotFoundError(digest)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        return destination
+
+
+_SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
+
+
+def _slugify(value: str) -> str:
+    slug = _SLUG_PATTERN.sub("-", value.lower()).strip("-")
+    return slug or "document"
+
+
+class BaseSourceConnector:
+    def __init__(self, settings: Settings, registry: CredentialRegistry, logger: logging.Logger) -> None:
+        self.settings = settings
+        self.registry = registry
+        self.logger = logger
+
+    def materialize(self, job_id: str, index: int, source: IngestionSource) -> MaterializedSource:
+        raise NotImplementedError
+
+    def preflight(self, source: IngestionSource) -> None:
+        """Perform lightweight validation prior to enqueueing."""
+        return None
+
+    def _load_credentials(self, reference: str) -> Dict[str, str]:
+        try:
+            credentials = self.registry.get(reference)
+        except KeyError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Credential {reference} not found") from exc
+        return {key: str(value) for key, value in credentials.items()}
+
+    def _workspace(self, job_id: str, index: int, label: str) -> Path:
+        workspace = self.settings.ingestion_workspace_dir / job_id / f"{index:02d}_{label}"
+        workspace.mkdir(parents=True, exist_ok=True)
+        return workspace
+
+
 class WebSourceConnector(BaseSourceConnector):
     def preflight(self, source: IngestionSource) -> None:
         self._validate_url(source)
@@ -97,70 +161,6 @@ class WebSourceConnector(BaseSourceConnector):
     def _normalise_url_path(url: str) -> str:
         parsed = urlparse(url)
         return parsed.path or "/"
-
-
-class DigestCache:
-    def __init__(self, base_dir: Path, *, suffix: str = ".json") -> None:
-        self.base_dir = Path(base_dir)
-        self.base_dir.mkdir(parents=True, exist_ok=True)
-        self.suffix = suffix
-
-    def path_for(self, digest: str) -> Path:
-        return self.base_dir / f"{digest}{self.suffix}"
-
-    def exists(self, digest: str) -> bool:
-        return self.path_for(digest).exists()
-
-    def store(self, digest: str, payload: bytes) -> Path:
-        path = self.path_for(digest)
-        if path.exists():
-            return path
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
-        tmp_path.write_bytes(payload)
-        tmp_path.replace(path)
-        return path
-
-    def copy(self, digest: str, destination: Path) -> Path:
-        source = self.path_for(digest)
-        if not source.exists():
-            raise FileNotFoundError(digest)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
-        return destination
-
-
-_SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
-
-
-def _slugify(value: str) -> str:
-    slug = _SLUG_PATTERN.sub("-", value.lower()).strip("-")
-    return slug or "document"
-
-
-class BaseSourceConnector:
-    def __init__(self, settings: Settings, registry: CredentialRegistry, logger: logging.Logger) -> None:
-        self.settings = settings
-        self.registry = registry
-        self.logger = logger
-
-    def materialize(self, job_id: str, index: int, source: IngestionSource) -> MaterializedSource:
-        raise NotImplementedError
-
-    def preflight(self, source: IngestionSource) -> None:
-        """Perform lightweight validation prior to enqueueing."""
-        return None
-
-    def _load_credentials(self, reference: str) -> Dict[str, str]:
-        try:
-            credentials = self.registry.get(reference)
-        except KeyError as exc:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Credential {reference} not found") from exc
-        return {key: str(value) for key, value in credentials.items()}
-
-    def _workspace(self, job_id: str, index: int, label: str) -> Path:
-        workspace = self.settings.ingestion_workspace_dir / job_id / f"{index:02d}_{label}"
-        workspace.mkdir(parents=True, exist_ok=True)
-        return workspace
 
 
 class LocalSourceConnector(BaseSourceConnector):
@@ -903,178 +903,38 @@ class OneDriveSourceConnector(BaseSourceConnector):
         )
 
 
-class WebSourceConnector(BaseSourceConnector):
 
-
-    def preflight(self, source: IngestionSource) -> None:
-
-
-        self._validate_url(source)
-
-
-        self._ensure_httpx()
-
-
-
-
-
-    def materialize(self, job_id: str, index: int, source: IngestionSource) -> MaterializedSource:
-
-
-        httpx = self._ensure_httpx()
-
-
-        url = self._validate_url(source)
-
-
-
-
-
-        workspace = self._workspace(job_id, index, "web")
-
-
-        filename = self._build_filename(url)
-
-
-        target = workspace / filename
-
-
-
-
-
-        with httpx.Client(timeout=30.0) as client:
-
-
-            try:
-
-
-                response = client.get(url)
-
-
-            except httpx.RequestError as exc:  # type: ignore[attr-defined]
-
-
-                raise HTTPException(
-
-
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-
-
-                    detail=f"Failed to fetch {url}: {exc}",
-
-
-                ) from exc
-
-
-            if response.status_code >= 400:
-
-
-                raise HTTPException(
-
-
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-
-
-                    detail=f"Failed to fetch {url}: HTTP {response.status_code}",
-
-
-                )
-
-
-            target.write_bytes(response.content)
-
-
-
-
-
-        self.logger.info("Fetched web source", extra={"url": url, "path": str(target)})
-
-
-        origin = f"web:{_normalise_url_path(url)}"
-
-
-        return MaterializedSource(root=workspace, source=source, origin=origin)
-
-
-
-
-
-    def _ensure_httpx(self) -> ModuleType:
-
-
-        try:
-
-
-            import httpx
-
-
-        except ImportError as exc:
-
-
-            raise HTTPException(
-
-
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-
-
-                detail="Web ingestion requires httpx optional dependency",
-
-
-            ) from exc
-
-
-        return httpx
-
-
-
-
-
-    def _validate_url(self, source: IngestionSource) -> str:
-
-
-        if not source.path:
-
-
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Web source requires a URL in path")
-
-
-        url = source.path.strip()
-
-
-        if not url.lower().startswith(("http://", "https://")):
-
-
-            raise HTTPException(
-
-
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-
-
-                detail="Web source path must be a HTTP(S) URL",
-
-
-            )
-
-
-        return url
-
-
-
-
-
-    def _build_filename(self, url: str) -> str:
-
-
-        parsed = urlparse(url)
-
-
-        name = Path(parsed.path).name or "index.html"
-
-
-        if "." not in name:
-
-
-            name = f"{name}.html"
-
-
-        return name
+def build_connector(source_type: str, settings: Settings, registry: CredentialRegistry, logger: logging.Logger) -> BaseSourceConnector:
+    normalized = (source_type or '').strip().lower()
+    if normalized in {'local', 'filesystem', 'folder'}:
+        return LocalSourceConnector(settings, registry, logger)
+    if normalized in {'s3', 'aws-s3'}:
+        return S3SourceConnector(settings, registry, logger)
+    if normalized in {'courtlistener', 'court-listener'}:
+        return CourtListenerSourceConnector(settings, registry, logger)
+    if normalized in {'websearch', 'web-search', 'search'}:
+        return WebSearchSourceConnector(settings, registry, logger)
+    if normalized in {'sharepoint', 'share-point'}:
+        return SharePointSourceConnector(settings, registry, logger)
+    if normalized in {'onedrive', 'one-drive'}:
+        return OneDriveSourceConnector(settings, registry, logger)
+    if normalized in {'web', 'url'}:
+        return WebSourceConnector(settings, registry, logger)
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Unsupported ingestion source type '{source_type}'",
+    )
+
+
+__all__ = [
+    'MaterializedSource',
+    'BaseSourceConnector',
+    'LocalSourceConnector',
+    'S3SourceConnector',
+    'CourtListenerSourceConnector',
+    'WebSearchSourceConnector',
+    'SharePointSourceConnector',
+    'OneDriveSourceConnector',
+    'WebSourceConnector',
+    'build_connector',
+]

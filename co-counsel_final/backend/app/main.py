@@ -25,6 +25,9 @@ async def mtls_middleware(request: Request, call_next):
 from .api import retrieval
 
 app.include_router(retrieval.router)
+from .api import query_stream
+
+app.include_router(query_stream.router)
 from .api import graph
 
 app.include_router(graph.router)
@@ -68,6 +71,9 @@ app.include_router(onboarding.router)
 from .api import legal_research
 app.include_router(legal_research.router)
 
+from .api import courts
+app.include_router(courts.router)
+
 from .api import legal_theory
 
 app.include_router(legal_theory.router)
@@ -92,9 +98,17 @@ from .api import ingestion
 
 app.include_router(ingestion.router)
 
+from .api import workflow
+
+app.include_router(workflow.router)
+
 from .api import knowledge
 
 app.include_router(knowledge.router)
+
+from .api import graph_refinement
+
+app.include_router(graph_refinement.router)
 
 from .api import dev_agent
 

@@ -18,7 +18,7 @@ The **PRP Analyze Run** template standardises the way reviewers capture findings
 ### PRP Analyze Run — Structured Notes
 
 **Run Metadata**
-- PRP document(s): <!-- e.g., PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_spec.md -->
+- PRP document(s): <!-- e.g., PRP_CoCounsel_Swarms_LlamaIndex_Swarms_spec.md -->
 - Command / script: <!-- e.g., tools/run_command.sh ... -->
 - Date & time (UTC): 
 - Operator(s): 

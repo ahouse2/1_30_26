@@ -7,12 +7,18 @@ Services
 
 Health Checks
 - curl http://localhost:8000/health → {"status":"ok"}
-- Check Docker logs: docker compose -f infra/docker-compose.yml logs -f
+- Check Docker logs: docker compose --profile prod logs -f
 
 Env Vars
 - NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, QDRANT_URL, VECTOR_DIR
+- PACER_ENDPOINT, UNICOURT_ENDPOINT, LACS_ENDPOINT (court connector base URLs)
+- CASELAW_API_KEY, COURTLISTENER_TOKEN (case law sources)
 
 Common Tasks
-- Restart service: docker compose -f infra/docker-compose.yml restart api
-- Rebuild API: docker compose -f infra/docker-compose.yml up -d --build api
+- Restart service: docker compose --profile prod restart api
+- Rebuild API: docker compose --profile prod up -d --build api
 
+Court Integrations
+- Credentials are stored via Settings (UI or `PATCH /settings`) in encrypted storage.
+- Paid retrievals are recorded in `storage/court_payments/ledger.jsonl` (append-only).
+- Provider readiness lives at `GET /courts/providers`.

@@ -8,7 +8,7 @@ from .memory import CaseThreadMemory
 
 @dataclass(slots=True)
 class AgentContext:
-    """Execution context flowing across Microsoft Agents SDK graph nodes."""
+    """Execution context flowing across Swarms graph nodes."""
 
     case_id: str
     question: str

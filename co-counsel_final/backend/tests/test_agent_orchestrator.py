@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from unittest.mock import MagicMock
 
-from backend.app.services.agents import MicrosoftAgentsOrchestrator
+from backend.app.services.agents import SwarmsOrchestrator
 from backend.app.agents.definitions import AgentDefinition
 from backend.app.agents.runner import SessionGraph
 from backend.app.agents.tools import (
@@ -22,15 +22,17 @@ def test_orchestrator_initialization():
     research_tool = MagicMock(spec=ResearchTool)
     forensics_tool = MagicMock(spec=ForensicsTool)
     qa_tool = MagicMock(spec=QATool)
+    echo_tool = MagicMock()
     memory_store = MagicMock()
     graph_agent = MagicMock()
 
-    orchestrator = MicrosoftAgentsOrchestrator(
+    orchestrator = SwarmsOrchestrator(
         strategy_tool=strategy_tool,
         ingestion_tool=ingestion_tool,
         research_tool=research_tool,
         forensics_tool=forensics_tool,
         qa_tool=qa_tool,
+        echo_tool=echo_tool,
         memory_store=memory_store,
     )
     assert orchestrator is not None
@@ -84,14 +86,16 @@ def test_session_graph_from_definitions():
     research_tool = MagicMock(spec=ResearchTool)
     forensics_tool = MagicMock(spec=ForensicsTool)
     qa_tool = MagicMock(spec=QATool)
+    echo_tool = MagicMock()
     memory_store = MagicMock()
 
-    orchestrator = MicrosoftAgentsOrchestrator(
+    orchestrator = SwarmsOrchestrator(
         strategy_tool=strategy_tool,
         ingestion_tool=ingestion_tool,
         research_tool=research_tool,
         forensics_tool=forensics_tool,
         qa_tool=qa_tool,
+        echo_tool=echo_tool,
         memory_store=memory_store,
     )
 
@@ -127,15 +131,17 @@ def test_orchestrator_build_session_graph_policy_disabled():
     research_tool = MagicMock(spec=ResearchTool)
     forensics_tool = MagicMock(spec=ForensicsTool)
     qa_tool = MagicMock(spec=QATool)
+    echo_tool = MagicMock()
     memory_store = MagicMock()
     graph_agent = MagicMock()
 
-    orchestrator = MicrosoftAgentsOrchestrator(
+    orchestrator = SwarmsOrchestrator(
         strategy_tool=strategy_tool,
         ingestion_tool=ingestion_tool,
         research_tool=research_tool,
         forensics_tool=forensics_tool,
         qa_tool=qa_tool,
+        echo_tool=echo_tool,
         memory_store=memory_store,
     )
 

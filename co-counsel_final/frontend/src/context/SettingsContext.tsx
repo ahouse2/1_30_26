@@ -18,6 +18,7 @@ import {
 import {
   fetchModelCatalog,
   fetchSettingsSnapshot,
+  refreshModelCatalog as refreshModelCatalogApi,
   updateSettingsSnapshot,
 } from '@/utils/apiClient';
 
@@ -43,6 +44,7 @@ type SettingsContextValue = {
   resolvedModels: ResolvedModels;
   themePreference: ThemePreference;
   refresh: () => Promise<void>;
+  refreshModelCatalog: (providerId: string) => Promise<void>;
   updateSettings: (payload: SettingsUpdatePayload) => Promise<void>;
   setThemePreference: (theme: ThemePreference) => Promise<void>;
 };
@@ -166,6 +168,17 @@ export function SettingsProvider({ children }: { children: ReactNode }): JSX.Ele
     []
   );
 
+  const refreshModelCatalog = useCallback(async (providerId: string) => {
+    try {
+      const refreshed = await refreshModelCatalogApi(providerId);
+      setCatalog(refreshed);
+      setError(undefined);
+    } catch (err) {
+      setError(formatError(err));
+      throw err;
+    }
+  }, []);
+
   const setThemePreference = useCallback(
     async (theme: ThemePreference) => {
       const previous = themePreference;
@@ -214,6 +227,7 @@ export function SettingsProvider({ children }: { children: ReactNode }): JSX.Ele
     resolvedModels,
     themePreference,
     refresh,
+    refreshModelCatalog,
     updateSettings,
     setThemePreference,
   };
@@ -228,4 +242,3 @@ export function useSettingsContext(): SettingsContextValue {
   }
   return context;
 }
-

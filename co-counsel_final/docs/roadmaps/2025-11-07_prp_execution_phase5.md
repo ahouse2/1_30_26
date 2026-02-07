@@ -1,6 +1,6 @@
 # PRP Execution Run — Phase 5 Multi-Agent & ACE Alignment
 
-- ## Vision: Deliver the orchestrated MS Agents workflow with durable memory threads, rubric-driven QA, and telemetry instrumentation required for PRP Phase 5 exit criteria.
+- ## Vision: Deliver the orchestrated swarms workflow with durable memory threads, rubric-driven QA, and telemetry instrumentation required for PRP Phase 5 exit criteria.
   - ### Objectives
     - #### O1: Materialise deterministic multi-agent orchestration covering research, forensics, and QA agents.
       - ##### Outcomes

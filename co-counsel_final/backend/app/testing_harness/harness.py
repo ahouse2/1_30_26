@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Assuming the Agent Orchestrator can be imported and instantiated
-# from backend.app.agents.runner import MicrosoftAgentsOrchestrator 
+# from backend.app.agents.runner import SwarmsOrchestrator
 
 class TestingHarnessService:
     """
@@ -13,7 +13,7 @@ class TestingHarnessService:
     def __init__(self, scenario_path: str | Path = "backend/app/testing_harness/scenarios"):
         self.scenario_path = Path(scenario_path)
         self.scenario_path.mkdir(parents=True, exist_ok=True)
-        # self.orchestrator = MicrosoftAgentsOrchestrator() # Instantiate the orchestrator
+        # self.orchestrator = SwarmsOrchestrator()  # Instantiate the orchestrator
 
     def load_scenario(self, scenario_name: str) -> Dict[str, Any]:
         """

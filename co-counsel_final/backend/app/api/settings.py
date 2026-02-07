@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from ..models.api import (
     ModelCatalogResponse,
+    SettingsModelRefreshRequest,
     SettingsResponse,
     SettingsUpdateRequest,
 )
@@ -52,3 +53,18 @@ def list_model_catalog(
     service: SettingsService = Depends(get_settings_service),
 ) -> ModelCatalogResponse:
     return service.model_catalog()
+
+
+@router.post("/settings/models/refresh", response_model=ModelCatalogResponse)
+def refresh_model_catalog(
+    request: SettingsModelRefreshRequest,
+    _principal: Principal = Depends(authorize_settings_write),
+    service: SettingsService = Depends(get_settings_service),
+) -> ModelCatalogResponse:
+    try:
+        return service.refresh_model_catalog(request.provider_id)
+    except SettingsValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc

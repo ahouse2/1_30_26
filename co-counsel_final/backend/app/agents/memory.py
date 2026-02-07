@@ -10,7 +10,7 @@ from .types import AgentThread
 
 @dataclass(slots=True)
 class MemoryNamespace:
-    """Mutable namespace mirroring Microsoft Agents SDK memory semantics."""
+    """Mutable namespace mirroring Swarms memory semantics."""
 
     name: str
     data: Any
@@ -41,7 +41,7 @@ class MemoryNamespace:
 
 @dataclass(slots=True)
 class CaseThreadMemory:
-    """Shared memory abstraction aligned with Microsoft Agents SDK semantics."""
+    """Shared memory abstraction aligned with Swarms semantics."""
 
     thread: AgentThread
     store: AgentMemoryStore

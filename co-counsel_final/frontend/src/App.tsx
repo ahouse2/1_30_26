@@ -13,6 +13,8 @@ import ForensicsReportPage from '@/pages/ForensicsReportPage'; // New import
 import DocumentDraftingPage from '@/pages/DocumentDraftingPage';
 import ServiceOfProcessPage from '@/pages/ServiceOfProcessPage';
 import InCourtPresentationPage from '@/pages/InCourtPresentationPage';
+import CaseWorkflowPage from '@/pages/CaseWorkflowPage';
+import CentcomWarRoomPage from '@/pages/CentcomWarRoomPage';
 
 export function App() {
   const id = useId(); // Keep useId if it's used elsewhere in Layout or children
@@ -35,6 +37,8 @@ export function App() {
           <Route path="/drafting" element={<DocumentDraftingPage />} />
           <Route path="/service-of-process" element={<ServiceOfProcessPage />} />
           <Route path="/in-court-presentation" element={<InCourtPresentationPage />} />
+          <Route path="/workflow" element={<CaseWorkflowPage />} />
+          <Route path="/centcom" element={<CentcomWarRoomPage />} />
           {/* Add a catch-all for 404 or redirect to dashboard */}
           <Route path="*" element={<DashboardPage />} />
         </Routes>

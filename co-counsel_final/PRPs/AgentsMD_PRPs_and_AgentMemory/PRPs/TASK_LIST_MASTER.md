@@ -1,6 +1,6 @@
 # Task List — Master Plan (Phases 0–10)
 
-> **PRP Navigation:** [Base](PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_base.md) · [Planning](PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_planning.md) · [Spec](PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_spec.md) · [Tasks](PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_tasks.md) · [Pre-PRP Plan](PRE_PRP_PLAN.md) · [ACE Execution Guide](EXECUTION_GUIDE_ACE.md) · [Task List Master](TASK_LIST_MASTER.md) · [PRP Templates](templates/README.md) · [PRP Analyze Run Template](../.codex/commands/rapid-development/experimental/prp-analyze-run.md)
+> **PRP Navigation:** [Base](PRP_CoCounsel_Swarms_LlamaIndex_Swarms_base.md) · [Planning](PRP_CoCounsel_Swarms_LlamaIndex_Swarms_planning.md) · [Spec](PRP_CoCounsel_Swarms_LlamaIndex_Swarms_spec.md) · [Tasks](PRP_CoCounsel_Swarms_LlamaIndex_Swarms_tasks.md) · [Pre-PRP Plan](PRE_PRP_PLAN.md) · [ACE Execution Guide](EXECUTION_GUIDE_ACE.md) · [Task List Master](TASK_LIST_MASTER.md) · [PRP Templates](templates/README.md) · [PRP Analyze Run Template](../.codex/commands/rapid-development/experimental/prp-analyze-run.md)
 
 Phase 0 — Repo & Guardrails
 - [x] Compose skeleton, health endpoints, pre-commit
@@ -27,7 +27,7 @@ Phase 4 — Forensics Core (Non‑Negotiable)
 - [x] Forensics artifacts + API endpoints
 
 Phase 5 — Multi‑Agent + ACE
-- [x] MS Agents workflow nodes; memory threads
+- [x] swarms workflow nodes; memory threads
 - [x] ACE trio orchestration; telemetry spans
 - [x] QAAgent with rubric scoring and citation audit
   - [x] **Follow-on hardening** — extend TimelineAgent playbooks with retry/circuit breaker patterns, persist agent trace spans, and surface structured error taxonomy for downstream escalation.
