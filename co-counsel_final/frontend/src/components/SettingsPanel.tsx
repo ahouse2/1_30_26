@@ -40,7 +40,8 @@ export function SettingsPanel(): JSX.Element {
   const [visionModel, setVisionModel] = useState('');
   const [providerKeys, setProviderKeys] = useState<Record<string, string>>({});
   const [keysToClear, setKeysToClear] = useState<Record<string, boolean>>({});
-  const [providerBaseUrls, setProviderBaseUrls] = useState<Record<string, string>>({});
+  const [apiBaseUrls, setApiBaseUrls] = useState<Record<string, string>>({});
+  const [localRuntimePaths, setLocalRuntimePaths] = useState<Record<string, string>>({});
   const [refreshingProvider, setRefreshingProvider] = useState<string | null>(null);
   const [courtListenerToken, setCourtListenerToken] = useState('');
   const [clearCourtListener, setClearCourtListener] = useState(false);
@@ -67,7 +68,8 @@ export function SettingsPanel(): JSX.Element {
     setVisionModel(defaults['vision'] ?? '');
     setProviderKeys({});
     setKeysToClear({});
-    setProviderBaseUrls(settings.providers.api_base_urls ?? {});
+    setApiBaseUrls(settings.providers.api_base_urls ?? {});
+    setLocalRuntimePaths(settings.providers.local_runtime_paths ?? {});
     setCourtListenerToken('');
     setClearCourtListener(false);
     setPacerToken('');
@@ -138,10 +140,10 @@ export function SettingsPanel(): JSX.Element {
     if (!primaryProvider) {
       return;
     }
-    const apiBaseUrls: Record<string, string | null> = {};
-    Object.entries(providerBaseUrls).forEach(([providerId, baseUrl]) => {
+    const baseUrlOverrides: Record<string, string | null> = {};
+    Object.entries(apiBaseUrls).forEach(([providerId, baseUrl]) => {
       const trimmed = baseUrl.trim();
-      apiBaseUrls[providerId] = trimmed.length > 0 ? trimmed : null;
+      baseUrlOverrides[providerId] = trimmed.length > 0 ? trimmed : null;
     });
     await updateSettings({
       providers: {
@@ -152,7 +154,8 @@ export function SettingsPanel(): JSX.Element {
           embeddings: embeddingModel || null,
           vision: visionModel || null,
         },
-        api_base_urls: apiBaseUrls,
+        api_base_urls: baseUrlOverrides,
+        local_runtime_paths: localRuntimePaths,
       },
     });
   };
@@ -302,6 +305,9 @@ export function SettingsPanel(): JSX.Element {
         </label>
         <div className="settings-subsection">
           <h3>Provider endpoints</h3>
+          <p className="settings-hint">
+            Configure API base URLs for cloud and local runtimes (OpenRouter, LocalAI, LM Studio, Ollama).
+          </p>
           {providerCatalog.map((entry) => (
             <div key={entry.id} className="provider-endpoint">
               <label>
@@ -309,9 +315,9 @@ export function SettingsPanel(): JSX.Element {
                 <input
                   type="url"
                   placeholder="https://"
-                  value={providerBaseUrls[entry.id] ?? ''}
+                  value={apiBaseUrls[entry.id] ?? ''}
                   onChange={(event) =>
-                    setProviderBaseUrls((current) => ({ ...current, [entry.id]: event.target.value }))
+                    setApiBaseUrls((current) => ({ ...current, [entry.id]: event.target.value }))
                   }
                 />
               </label>
@@ -325,6 +331,31 @@ export function SettingsPanel(): JSX.Element {
               </button>
             </div>
           ))}
+        </div>
+        <div className="settings-subsection">
+          <h3>Local runtime paths</h3>
+          <p className="settings-hint">Optional overrides for local runners (llama.cpp, GGUF, Ollama).</p>
+          {['ollama', 'llama.cpp', 'gguf-local', 'localai', 'lmstudio'].map((providerId) => {
+            const entry = providerCatalog.find((item) => item.id === providerId);
+            const label = entry?.display_name ?? providerId;
+            return (
+              <label key={providerId}>
+                {label} path
+                <input
+                  type="text"
+                  value={localRuntimePaths[providerId] ?? ''}
+                  placeholder="runtime/path"
+                  onChange={(event) =>
+                    setLocalRuntimePaths((current) => ({
+                      ...current,
+                      [providerId]: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+            );
+          })}
+        </div>
         </div>
         <div className="form-actions">
           <button type="submit" disabled={saving}>

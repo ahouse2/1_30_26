@@ -22,6 +22,12 @@ describe("JSON utilities", () => {
       expect(result).toEqual({ name: "test" });
     });
 
+    it("should parse valid JSON object with whitespace", () => {
+      const jsonStr = ' \n  {"name":"test"}  \t';
+      const result = tryParseJsonObject(jsonStr);
+      expect(result).toEqual({ name: "test" });
+    });
+
     it("should return null for non-object JSON", () => {
       const jsonArray = "[1,2,3]";
       const result = tryParseJsonObject(jsonArray);
@@ -34,11 +40,24 @@ describe("JSON utilities", () => {
         "Not a JSON object",
       );
     });
+
+    it("should throw error for invalid object JSON when shouldThrow is true", () => {
+      const jsonStr = '{"name":}';
+      expect(() => tryParseJsonObject(jsonStr, true)).toThrow(
+        "Not a JSON object",
+      );
+    });
   });
 
   describe("tryParseJsonArray", () => {
     it("should parse valid JSON array", () => {
       const jsonStr = "[1,2,3]";
+      const result = tryParseJsonArray(jsonStr);
+      expect(result).toEqual([1, 2, 3]);
+    });
+
+    it("should parse valid JSON array with whitespace", () => {
+      const jsonStr = "\n [1,2,3] \t";
       const result = tryParseJsonArray(jsonStr);
       expect(result).toEqual([1, 2, 3]);
     });
@@ -52,6 +71,13 @@ describe("JSON utilities", () => {
     it("should throw error for non-array JSON when shouldThrow is true", () => {
       const jsonObj = '{"name":"test"}';
       expect(() => tryParseJsonArray(jsonObj, true)).toThrow(
+        "Not a JSON array",
+      );
+    });
+
+    it("should throw error for invalid array JSON when shouldThrow is true", () => {
+      const jsonStr = "[1,2,]";
+      expect(() => tryParseJsonArray(jsonStr, true)).toThrow(
         "Not a JSON array",
       );
     });

@@ -157,11 +157,75 @@ class WebSourceConnector(BaseSourceConnector):
             name = f"{name}.html"
         return name
 
+
     @staticmethod
     def _normalise_url_path(url: str) -> str:
         parsed = urlparse(url)
         return parsed.path or "/"
 
+
+class DigestCache:
+    def __init__(self, base_dir: Path, *, suffix: str = ".json") -> None:
+        self.base_dir = Path(base_dir)
+        self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.suffix = suffix
+
+    def path_for(self, digest: str) -> Path:
+        return self.base_dir / f"{digest}{self.suffix}"
+
+    def exists(self, digest: str) -> bool:
+        return self.path_for(digest).exists()
+
+    def store(self, digest: str, payload: bytes) -> Path:
+        path = self.path_for(digest)
+        if path.exists():
+            return path
+        tmp_path = path.with_suffix(path.suffix + ".tmp")
+        tmp_path.write_bytes(payload)
+        tmp_path.replace(path)
+        return path
+
+    def copy(self, digest: str, destination: Path) -> Path:
+        source = self.path_for(digest)
+        if not source.exists():
+            raise FileNotFoundError(digest)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        return destination
+
+
+_SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
+
+
+def _slugify(value: str) -> str:
+    slug = _SLUG_PATTERN.sub("-", value.lower()).strip("-")
+    return slug or "document"
+
+
+class BaseSourceConnector:
+    def __init__(self, settings: Settings, registry: CredentialRegistry, logger: logging.Logger) -> None:
+        self.settings = settings
+        self.registry = registry
+        self.logger = logger
+
+    def materialize(self, job_id: str, index: int, source: IngestionSource) -> MaterializedSource:
+        raise NotImplementedError
+
+    def preflight(self, source: IngestionSource) -> None:
+        """Perform lightweight validation prior to enqueueing."""
+        return None
+
+    def _load_credentials(self, reference: str) -> Dict[str, str]:
+        try:
+            credentials = self.registry.get(reference)
+        except KeyError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Credential {reference} not found") from exc
+        return {key: str(value) for key, value in credentials.items()}
+
+    def _workspace(self, job_id: str, index: int, label: str) -> Path:
+        workspace = self.settings.ingestion_workspace_dir / job_id / f"{index:02d}_{label}"
+        workspace.mkdir(parents=True, exist_ok=True)
+        return workspace
 
 class LocalSourceConnector(BaseSourceConnector):
     def preflight(self, source: IngestionSource) -> None:

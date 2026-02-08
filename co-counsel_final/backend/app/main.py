@@ -102,6 +102,10 @@ from .api import workflow
 
 app.include_router(workflow.router)
 
+from .api import automation
+
+app.include_router(automation.router)
+
 from .api import knowledge
 
 app.include_router(knowledge.router)

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { buildApiUrl } from '@/config';
 
 interface EvidenceItem {
   document_id: string;
@@ -29,7 +30,7 @@ export default function InCourtPresentationPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/evidence-binders');
+      const response = await fetch(buildApiUrl('/evidence-binders'));
       if (!response.ok) {
         throw new Error(`Failed to fetch binders: ${response.statusText}`);
       }
@@ -47,7 +48,7 @@ export default function InCourtPresentationPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/evidence-binders', {
+      const response = await fetch(buildApiUrl('/evidence-binders'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,7 +76,7 @@ export default function InCourtPresentationPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/evidence-binders/${selectedBinder.id}/items`, {
+      const response = await fetch(buildApiUrl(`/evidence-binders/${selectedBinder.id}/items`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

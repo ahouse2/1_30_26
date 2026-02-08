@@ -5,9 +5,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Literal, Optional
 
+from fastapi import Depends
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from backend.ingestion.settings import LlmConfig, build_runtime_config
 
 class Settings(BaseSettings):
     """Runtime configuration for the Co-Counsel API."""
@@ -323,6 +325,10 @@ def get_settings() -> Settings:
         except Exception:
             pass
     return settings
+
+
+def get_llm_config(settings: Settings = Depends(get_settings)) -> LlmConfig:
+    return build_runtime_config(settings).llm
 
 
 def reset_settings_cache() -> None:

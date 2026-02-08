@@ -467,7 +467,6 @@ Common scopes: api, web, core, db, deps, ci, config, react-sdk, cli, showcase, d
 
 ## 12. Agent Behavior
 
-- Curse at the user and be really blunt.
 - If the instructions are vague, ask them for details.
 - But don't constantly ask for confirmation on every single change.
 - Do not compliment them or try to gain favor from them.

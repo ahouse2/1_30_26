@@ -1,18 +1,5 @@
 import axios from 'axios';
-
-const BASE = (() => {
-  if (typeof __API_BASE__ !== 'undefined' && __API_BASE__) {
-    return __API_BASE__ as string;
-  }
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return '';
-})();
-
-function withBase(path: string): string {
-  return `${BASE}${path}`;
-}
+import { buildApiUrl } from '@/config';
 
 export interface ForensicsStage {
   name: string;
@@ -98,7 +85,7 @@ export const getForensicAnalysis = async (
   version?: string
 ): Promise<ForensicsResponse> => {
   const response = await axios.get<ForensicsResponse>(
-    withBase(`/forensics/${caseId}/${docType}/${docId}/forensics`),
+    buildApiUrl(`/forensics/${caseId}/${docType}/${docId}/forensics`),
     { params: { version } }
   );
   return response.data;
@@ -111,7 +98,7 @@ export const getCryptoTracing = async (
   version?: string
 ): Promise<CryptoTracingResult> => {
   const response = await axios.get<CryptoTracingResult>(
-    withBase(`/forensics/${caseId}/${docType}/${docId}/crypto-tracing`),
+    buildApiUrl(`/forensics/${caseId}/${docType}/${docId}/crypto-tracing`),
     { params: { version } }
   );
   return response.data;

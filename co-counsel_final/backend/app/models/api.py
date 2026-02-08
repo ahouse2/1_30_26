@@ -23,11 +23,25 @@ class IngestionSource(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
+class AutomationPreferences(BaseModel):
+    auto_run: bool = Field(default=True, description="Run downstream stages automatically after ingestion.")
+    stages: List[Literal["graph", "forensics", "legal_theory", "timeline", "presentation"]] = Field(
+        default_factory=lambda: ["graph", "forensics", "legal_theory", "timeline", "presentation"],
+    )
+    question: Optional[str] = Field(
+        default=None, description="Question guiding legal theory synthesis."
+    )
+    case_id: Optional[str] = Field(default=None, description="Case identifier for downstream workflows.")
+    autonomy_level: Literal["manual", "balanced", "autonomous"] = Field(default="balanced")
+
+
 class IngestionRequest(BaseModel):
     sources: List[IngestionSource]
     case_id: Optional[str] = None
     auto_run: bool = True
     phases: List[str] = Field(default_factory=list)
+    automation: Optional["AutomationPreferences"] = None
+    automation: Optional["AutomationPreferences"] = None
 
 
 class IngestionResponse(BaseModel):
@@ -80,11 +94,58 @@ class IngestionGraphDetailsModel(BaseModel):
     triples: int
 
 
+class AutomationStageModel(BaseModel):
+    name: str
+    status: Literal["pending", "running", "succeeded", "failed"]
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    message: Optional[str] = None
+
+
+class LegalFrameworkModel(BaseModel):
+    framework_id: str
+    label: str
+    strategy_brief: "GraphStrategyBriefModel"
+    source_documents: List[str] = Field(default_factory=list)
+    score: Optional[float] = None
+
+
+class AutomationResultsModel(BaseModel):
+    graph: Optional[dict] = None
+    forensics: Optional[dict] = None
+    legal_frameworks: List[LegalFrameworkModel] = Field(default_factory=list)
+    timeline: Optional[dict] = None
+    presentation: Optional[dict] = None
+
+
+class AutomationStatusModel(BaseModel):
+    stages: List[AutomationStageModel] = Field(default_factory=list)
+    results: AutomationResultsModel = Field(default_factory=AutomationResultsModel)
+
+
+class AutomationPipelineRunRequest(BaseModel):
+    stages: List[Literal["graph", "forensics", "legal_theory", "timeline", "presentation"]] = Field(
+        default_factory=list
+    )
+    question: Optional[str] = None
+    case_id: Optional[str] = None
+    autonomy_level: Literal["manual", "balanced", "autonomous"] = Field(default="balanced")
+    force: bool = Field(default=False, description="Re-run stages even if already completed.")
+
+
+class AutomationPipelineResponse(BaseModel):
+    job_id: str
+    stages: List[AutomationStageModel]
+    results: AutomationResultsModel
+
+
+
 class IngestionStatusDetailsModel(BaseModel):
     ingestion: IngestionIngestionDetailsModel
     timeline: IngestionTimelineDetailsModel
     forensics: IngestionForensicsDetailsModel
     graph: IngestionGraphDetailsModel
+    automation: Optional["AutomationStatusModel"] = None
 
 
 class IngestionStatusResponse(BaseModel):

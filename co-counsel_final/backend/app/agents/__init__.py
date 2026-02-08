@@ -1,7 +1,9 @@
-"""Swarms orchestration primitives for the backend."""
+"""Agent orchestration primitives for the backend."""
 
 from __future__ import annotations
 
-from .runner import SwarmsOrchestrator, get_orchestrator
+from .orchestrator import AgentsOrchestrator
+from .runner import get_orchestrator
+from .swarms_orchestrator import SwarmsOrchestrator
 
-__all__ = ["SwarmsOrchestrator", "get_orchestrator"]
+__all__ = ["AgentsOrchestrator", "SwarmsOrchestrator", "get_orchestrator"]
