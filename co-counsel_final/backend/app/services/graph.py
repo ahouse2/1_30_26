@@ -207,8 +207,18 @@ class _FallbackSimplePropertyGraphStore:
     def vector_query(self, query: Any, **_: Any) -> Tuple[List[Any], List[float]]:
         return ([], [])
 
-    def upsert_llama_nodes(self, _: List[Any]) -> None:  # pragma: no cover - compatibility shim
-        return
+    def upsert_llama_nodes(self, nodes: List[dict]) -> None:
+        for node in nodes:
+            node_id = node.get("id") or node.get("node_id")
+            if not node_id:
+                continue
+            node_type = node.get("type") or "Chunk"
+            properties = dict(node.get("properties", {}))
+            if node_type == "Document":
+                title = str(properties.get("title") or node_id)
+                self.upsert_document(node_id, title, properties)
+            else:
+                self.upsert_entity(node_id, node_type, properties)
 
 
 _EntityNodeFactory = (
@@ -467,6 +477,42 @@ class GraphStrategyBrief:
 
 
 class GraphService:
+
+    @staticmethod
+    def normalize_relation_type(label: str) -> str:
+        cleaned = ''.join(ch for ch in str(label).upper() if ch.isalnum() or ch == '_')
+        return cleaned or 'RELATED_TO'
+
+    @staticmethod
+    def normalize_entity_type(label: str) -> str:
+        cleaned = ''.join(ch for ch in str(label) if ch.isalnum() or ch in {'_', '-'})
+        return cleaned or 'Entity'
+
+    def apply_extraction_payload(self, payload: dict) -> dict:
+        entities = payload.get('entities', []) if isinstance(payload, dict) else []
+        triples = payload.get('triples', []) if isinstance(payload, dict) else []
+        new_nodes = 0
+        new_edges = 0
+        for entity in entities:
+            entity_id = entity.get('id') or entity.get('label')
+            if not entity_id:
+                continue
+            entity_type = self.normalize_entity_type(entity.get('type') or 'Entity')
+            if entity_id not in self._node_cache:
+                new_nodes += 1
+            self.upsert_entity(entity_id, entity_type, dict(entity))
+        for triple in triples:
+            source = triple.get('subject')
+            target = triple.get('object')
+            predicate = self.normalize_relation_type(triple.get('predicate') or 'RELATED_TO')
+            if not source or not target:
+                continue
+            key = self._edge_key(source, predicate, target, triple)
+            if key not in self._edge_cache:
+                new_edges += 1
+            self.merge_relation(source, predicate, target, {"evidence": triple.get('evidence')})
+        return {"new_nodes": new_nodes, "new_edges": new_edges}
+
     def __init__(self) -> None:
         self.settings = get_settings()
         self.mode = "neo4j" if self.settings.neo4j_uri != "memory://" else "memory"
@@ -563,6 +609,28 @@ class GraphService:
             self._record_edge(relation)
 
     # region Upserts
+
+    def upsert_nodes(self, nodes: list[dict]) -> None:
+        for node in nodes:
+            node_id = node.get("id")
+            node_type = node.get("type") or "Entity"
+            if not node_id:
+                continue
+            if node_type == "Document":
+                title = str(node.get("properties", {}).get("title") or node_id)
+                self.upsert_document(node_id, title, dict(node.get("properties", {})))
+            else:
+                self.upsert_entity(node_id, node_type, dict(node.get("properties", {})))
+
+    def upsert_relations(self, relations: list[dict]) -> None:
+        for relation in relations:
+            source = relation.get("source")
+            target = relation.get("target")
+            rel_type = relation.get("type") or "RELATED_TO"
+            if not source or not target:
+                continue
+            self.merge_relation(source, rel_type, target, dict(relation.get("properties", {})))
+
     def upsert_document(self, doc_id: str, title: str, metadata: Dict[str, object]) -> None:
         if self.mode == "neo4j":
             query = (
@@ -740,39 +808,108 @@ class GraphService:
                     )
         return GraphSubgraph(nodes=aggregated_nodes, edges=aggregated_edges)
 
-    def search_entities(self, query: str, limit: int = 5) -> List[GraphNode]:
+    def overview(self, limit: int = 120, case_id: Optional[str] = None) -> GraphSubgraph:
+        if limit <= 0:
+            return GraphSubgraph()
+        if self.mode == "neo4j":
+            node_ids = self._fetch_overview_node_ids(limit=limit, case_id=case_id)
+            if case_id and not node_ids:
+                node_ids = self._fetch_overview_node_ids(limit=limit, case_id=None)
+            return self.subgraph(node_ids)
+        nodes = list(self._node_cache.values())
+        if not nodes and hasattr(self, "_nodes"):
+            nodes = list(getattr(self, "_nodes").values())
+        if case_id:
+            nodes = [node for node in nodes if self._node_matches_case(node, case_id)]
+        degree_map = self._degree_map()
+        ordered = sorted(nodes, key=lambda node: degree_map.get(node.id, 0), reverse=True)
+        node_ids = [node.id for node in ordered[:limit]]
+        return self.subgraph(node_ids)
+
+    def search_entities(self, query: str, limit: int = 5, case_id: Optional[str] = None) -> List[GraphNode]:
         if not query:
             return []
         term = query.lower()
         if self.mode == "neo4j":
             stmt = (
-                "MATCH (e:Entity) WHERE toLower(e.label) CONTAINS $term "
-                "RETURN e LIMIT $limit"
+                "MATCH (n) "
+                "WHERE toLower(coalesce(n.label, n.title, n.name, n.id, '')) CONTAINS $term "
+                "AND ($case_id IS NULL OR n.case_id = $case_id OR $case_id IN coalesce(n.case_ids, [])) "
+                "RETURN n LIMIT $limit"
             )
             with self.driver.session() as session:
                 result = session.execute_read(
-                    lambda tx: list(tx.run(stmt, term=term, limit=limit))
+                    lambda tx: list(tx.run(stmt, term=term, limit=limit, case_id=case_id))
                 )
             nodes: List[GraphNode] = []
             for record in result:
-                node = record["e"]
+                node = record["n"]
+                label = next(iter(node.labels)) if node.labels else node.get("type", "Unknown")
                 nodes.append(
                     GraphNode(
                         id=node["id"],
-                        type=node.get("type", "Entity"),
+                        type=label,
                         properties=dict(node),
                     )
                 )
             return nodes
         matches: List[GraphNode] = []
-        for node in self._nodes.values():
-            if node.type not in {"Entity", "Organization", "Person", "Location", "Event"}:
+        node_source = self._node_cache.values()
+        if not self._node_cache and hasattr(self, "_nodes"):
+            node_source = getattr(self, "_nodes").values()
+        for node in node_source:
+            if case_id and not self._node_matches_case(node, case_id):
                 continue
-            label = str(node.properties.get("label", "")).lower()
+            label = self._node_search_text(node)
             if term in label:
                 matches.append(node)
-        matches.sort(key=lambda node: node.properties.get("label", ""))
+        matches.sort(key=lambda node: node.properties.get("label", node.id))
         return matches[:limit]
+
+    def _fetch_overview_node_ids(self, *, limit: int, case_id: Optional[str]) -> List[str]:
+        if self.mode != "neo4j":
+            return []
+        if case_id:
+            stmt = (
+                "MATCH (n) "
+                "WHERE n.case_id = $case_id OR $case_id IN coalesce(n.case_ids, []) "
+                "RETURN n.id as id LIMIT $limit"
+            )
+            params = {"case_id": case_id, "limit": limit}
+        else:
+            stmt = (
+                "MATCH (n) "
+                "OPTIONAL MATCH (n)--() "
+                "WITH n, count(*) as degree "
+                "RETURN n.id as id "
+                "ORDER BY degree DESC LIMIT $limit"
+            )
+            params = {"limit": limit}
+        with self.driver.session() as session:
+            result = session.execute_read(lambda tx: list(tx.run(stmt, **params)))
+        return [record["id"] for record in result if record.get("id")]
+
+    @staticmethod
+    def _node_search_text(node: GraphNode) -> str:
+        properties = node.properties if isinstance(node.properties, dict) else {}
+        for key in ("label", "title", "name", "id"):
+            raw = properties.get(key)
+            if raw:
+                return str(raw).lower()
+        return node.id.lower()
+
+    @staticmethod
+    def _node_matches_case(node: GraphNode, case_id: str) -> bool:
+        if not case_id:
+            return True
+        properties = node.properties if isinstance(node.properties, dict) else {}
+        direct = properties.get("case_id")
+        if isinstance(direct, str) and direct == case_id:
+            return True
+        cases = properties.get("case_ids")
+        if isinstance(cases, (list, tuple, set)):
+            return case_id in {str(item) for item in cases}
+        return False
 
     def document_entities(self, doc_ids: Iterable[str]) -> Dict[str, List[GraphNode]]:
         ids = list(dict.fromkeys(doc_ids))
@@ -931,6 +1068,29 @@ class GraphService:
             for community in summary.communities
             if focus & {node["id"] for node in community.nodes}
         ]
+
+
+    def refine_schema(self, *, max_new_edges: int = 5) -> Dict[str, int]:
+        summary = self.compute_community_summary()
+        new_edges = 0
+        for community in summary.communities:
+            node_ids = [node["id"] for node in community.nodes if node.get("id")]
+            if len(node_ids) < 2:
+                continue
+            for source, target in zip(node_ids, node_ids[1:]):
+                if new_edges >= max_new_edges:
+                    return {"new_edges": new_edges, "new_nodes": 0, "new_clusters": len(summary.communities)}
+                key = self._edge_key(source, "CO_OCCURS", target, {"community": community.id})
+                if key in self._edge_cache:
+                    continue
+                self.merge_relation(
+                    source,
+                    "CO_OCCURS",
+                    target,
+                    {"community": community.id, "score": community.score},
+                )
+                new_edges += 1
+        return {"new_edges": new_edges, "new_nodes": 0, "new_clusters": len(summary.communities)}
 
     def describe_schema(self) -> str:
         node_types = sorted({node.type for node in self._node_cache.values()} or {"Unknown"})
@@ -1700,11 +1860,21 @@ class GraphService:
             f"Graph query answering '{question}' returned {record_count} record(s) with {doc_text}."
         )
 
+    def upsert_payload(self, payload: dict, *, phase: str, run_id: str, case_id: str) -> None:
+        graph = payload.get("graph") if isinstance(payload, dict) else None
+        if not graph:
+            return
+        nodes = graph.get("nodes") if isinstance(graph, dict) else None
+        edges = graph.get("edges") if isinstance(graph, dict) else None
+        if nodes:
+            self.upsert_nodes(nodes)
+        if edges:
+            self.upsert_relations(edges)
+
     # endregion
 
 
 _graph_service: GraphService | None = None
-
 
 def get_graph_service() -> GraphService:
     global _graph_service
@@ -1716,4 +1886,3 @@ def get_graph_service() -> GraphService:
 def reset_graph_service() -> None:
     global _graph_service
     _graph_service = None
-

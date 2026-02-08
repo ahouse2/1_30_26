@@ -17,8 +17,8 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt /app/requirements.txt
-RUN pip install --upgrade pip
- RUN pip install uv
+RUN pip install --upgrade --no-cache-dir pip
+RUN pip install --no-cache-dir uv
 ENV UV_HTTP_TIMEOUT=1200
 RUN uv pip install -r requirements.txt --prerelease=allow
 

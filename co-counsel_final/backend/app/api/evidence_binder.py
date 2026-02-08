@@ -10,31 +10,33 @@ from ..security.dependencies import (
     authorize_forensics_financial,
     authorize_forensics_image,
 )
+from ..evidence_binder import router as binder_router
 
 router = APIRouter()
+router.include_router(binder_router.router)
 
-@router.get("/forensics/document/{document_id}", response_model=ForensicsResponse)
+@router.get("/forensics/document", response_model=ForensicsResponse)
 def get_document_forensics(
-    document_id: str,
+    id: str,
     _principal: Principal = Depends(authorize_forensics_document),
     service: ForensicsService = Depends(get_forensics_service),
 ) -> ForensicsResponse:
-    return service.get_document_forensics(document_id)
+    return service.get_document_forensics(id, principal=_principal)
 
 
-@router.get("/forensics/image/{image_id}", response_model=ForensicsResponse)
+@router.get("/forensics/image", response_model=ForensicsResponse)
 def get_image_forensics(
-    image_id: str,
+    id: str,
     _principal: Principal = Depends(authorize_forensics_image),
     service: ForensicsService = Depends(get_forensics_service),
 ) -> ForensicsResponse:
-    return service.get_image_forensics(image_id)
+    return service.get_image_forensics(id, principal=_principal)
 
 
-@router.get("/forensics/financial/{transaction_id}", response_model=ForensicsResponse)
+@router.get("/forensics/financial", response_model=ForensicsResponse)
 def get_financial_forensics(
-    transaction_id: str,
+    id: str,
     _principal: Principal = Depends(authorize_forensics_financial),
     service: ForensicsService = Depends(get_forensics_service),
 ) -> ForensicsResponse:
-    return service.get_financial_forensics(transaction_id)
+    return service.get_financial_forensics(id, principal=_principal)

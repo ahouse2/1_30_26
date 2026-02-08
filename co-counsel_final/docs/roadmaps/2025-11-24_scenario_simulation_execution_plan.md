@@ -3,7 +3,7 @@
 ## 0. Orientation
 - **Objective**: deliver a courtroom simulation experience spanning backend scripted exchanges, WebGL front-end, optional TTS, configuration UI, asset pipeline, automated tests, and authoring documentation.
 - **Constraints**:
-  - Integrate with existing Microsoft Agents orchestrator without regressing current workflows.
+  - Integrate with existing Swarms orchestrator without regressing current workflows.
   - No placeholder logic; all features production-grade.
   - Maintain CI parity (pytest + vitest) and update stewardship artefacts (ACE log, build log, memory state).
 - **Success Metrics**:

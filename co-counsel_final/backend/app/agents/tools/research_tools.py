@@ -13,28 +13,44 @@ class LegalResearchTool:
     A tool that orchestrates various legal research clients and scrapers.
     """
     def __init__(self):
-        self.courtlistener_client = CourtListenerClient()
-        self.caselaw_client = CaseLawClient()
-        self.govinfo_client = GovInfoClient()
-        self.ca_scraper = CaliforniaCodesScraper()
-        self.ecfr_scraper = ECFRScraper()
+        self.courtlistener_client: CourtListenerClient | None = None
+        self.caselaw_client: CaseLawClient | None = None
+        self.govinfo_client: GovInfoClient | None = None
+        self.ca_scraper: CaliforniaCodesScraper | None = None
+        self.ecfr_scraper: ECFRScraper | None = None
+
+    def _ensure_clients(self) -> None:
+        if self.courtlistener_client is None:
+            self.courtlistener_client = CourtListenerClient()
+        if self.caselaw_client is None:
+            self.caselaw_client = CaseLawClient()
+        if self.govinfo_client is None:
+            self.govinfo_client = GovInfoClient()
+        if self.ca_scraper is None:
+            self.ca_scraper = CaliforniaCodesScraper()
+        if self.ecfr_scraper is None:
+            self.ecfr_scraper = ECFRScraper()
 
     async def search_case_law(self, query: str) -> Dict[str, Any]:
         """Searches CourtListener and Case.law for case law."""
+        self._ensure_clients()
         cl_results = await self.courtlistener_client.search_opinions(query)
         cl_caselaw = await self.caselaw_client.search_cases(query)
         return {"courtlistener": cl_results, "caselaw": cl_caselaw}
 
     async def search_us_code(self, query: str) -> Dict[str, Any]:
         """Searches the US Code via the GovInfo API."""
+        self._ensure_clients()
         return await self.govinfo_client.search(query, collection="USCODE")
 
     async def get_california_code_section(self, code: str, section: str) -> Dict | None:
         """Retrieves a specific section of the California code."""
+        self._ensure_clients()
         return await self.ca_scraper.get_code_section(code, section)
 
     async def search_ecfr(self, query: str) -> List[Dict]:
         """Searches the Electronic Code of Federal Regulations."""
+        self._ensure_clients()
         return await self.ecfr_scraper.search(query)
 
 class WebScraperTool:

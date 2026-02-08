@@ -10,16 +10,16 @@ import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Sequence
 
 from backend.app.config import get_settings
-from backend.app.services.settings import SettingsService
+from backend.app import get_provider_registry
 from backend.app.providers.catalog import ProviderCapability
 from backend.app.providers.registry import (
     ProviderCapabilityError,
     ProviderResolution,
-    get_provider_registry,
 )
+from backend.app.services.settings import SettingsService
 
 
 @dataclass
@@ -67,6 +67,30 @@ class BaseLlmService(ABC):
         """Generate text from a prompt asynchronously."""
         raise NotImplementedError
 
+    def stream_text(
+        self,
+        prompt: str,
+        *,
+        chunk_size: int = 200,
+        **kwargs: Any,
+    ) -> Iterable[str]:
+        """Stream text from a prompt synchronously."""
+        content = self.generate_text(prompt, **kwargs)
+        for chunk in self._chunk_text(content, chunk_size):
+            yield chunk
+
+    async def astream_text(
+        self,
+        prompt: str,
+        *,
+        chunk_size: int = 200,
+        **kwargs: Any,
+    ) -> AsyncIterable[str]:
+        """Stream text from a prompt asynchronously."""
+        content = await self.agenerate_text(prompt, **kwargs)
+        for chunk in self._chunk_text(content, chunk_size):
+            yield chunk
+
     def generate_chat(
         self,
         messages: Sequence[ChatMessage],
@@ -95,6 +119,12 @@ class BaseLlmService(ABC):
             model=self.model,
             provider=self.provider_id,
         )
+
+    @staticmethod
+    def _chunk_text(text: str, chunk_size: int) -> Sequence[str]:
+        if chunk_size <= 0:
+            return [text]
+        return [text[i : i + chunk_size] for i in range(0, len(text), chunk_size)]
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +175,29 @@ class OllamaLlmService(BaseLlmService):
         return await loop.run_in_executor(
             None, lambda: self.generate_text(prompt, **kwargs)
         )
+
+    def stream_text(
+        self,
+        prompt: str,
+        **kwargs: Any,
+    ) -> Iterable[str]:
+        client = self._get_client()
+        try:
+            response = client.chat(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                options={"num_predict": kwargs.get("max_tokens", 1024)},
+                stream=True,
+            )
+            for chunk in response:
+                content = None
+                if isinstance(chunk, dict):
+                    message = chunk.get("message") or {}
+                    content = message.get("content") or chunk.get("content")
+                if content:
+                    yield content
+        except Exception as e:
+            raise RuntimeError(f"Ollama streaming failed: {e}") from e
 
     def generate_chat(
         self,
@@ -272,6 +325,32 @@ class OpenAILlmService(BaseLlmService):
             return response.choices[0].message.content or ""
         except Exception as e:
             raise RuntimeError(f"OpenAI generation failed: {e}") from e
+
+    def stream_text(
+        self,
+        prompt: str,
+        **kwargs: Any,
+    ) -> Iterable[str]:
+        client = self._get_client()
+        try:
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=kwargs.get("max_tokens", 1024),
+                temperature=kwargs.get("temperature", 0.7),
+                stream=True,
+            )
+            for event in response:
+                delta = event.choices[0].delta
+                content = None
+                if hasattr(delta, "content"):
+                    content = delta.content
+                elif isinstance(delta, dict):
+                    content = delta.get("content")
+                if content:
+                    yield content
+        except Exception as e:
+            raise RuntimeError(f"OpenAI streaming failed: {e}") from e
 
     async def agenerate_text(self, prompt: str, **kwargs: Any) -> str:
         loop = asyncio.get_event_loop()
@@ -403,12 +482,13 @@ class HuggingFaceLlmService(BaseLlmService):
         self,
         *,
         model: str = "meta-llama-3.1-70b-instruct",
+        base_url: str | None = None,
         api_key: str | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(
             model=model,
-            base_url="https://api-inference.huggingface.co/models",
+            base_url=base_url or "https://api-inference.huggingface.co/models",
             api_key=api_key,
             **kwargs,
         )
@@ -492,6 +572,7 @@ def create_llm_service(
 
     settings = get_settings()
     settings_service = SettingsService(runtime_settings=settings)
+    provider_api_key = settings_service.get_provider_api_key(provider)
 
     # Resolve model from settings if not provided
     if model is None:
@@ -502,14 +583,20 @@ def create_llm_service(
 
     # Resolve API keys and base URLs from settings
     if provider == "ollama":
-        kwargs.setdefault("base_url", settings.ingestion_ollama_base or "http://localhost:11434")
-    elif provider in {"openai", "openrouter", "localai", "lmstudio"}:
-        api_key = settings_service.get_provider_api_key(provider) or settings.ingestion_openai_api_key
-        kwargs.setdefault("api_key", api_key)
+        base_url = (
+            settings.provider_api_base_urls.get("ollama")
+            or settings.ingestion_ollama_base
+            or "http://localhost:11434"
+        )
+        kwargs.setdefault("base_url", base_url)
+    elif provider in {"openai", "azure-openai", "openrouter", "localai", "lmstudio"}:
+        kwargs.setdefault("api_key", provider_api_key or settings.ingestion_openai_api_key)
         kwargs.setdefault("base_url", settings.provider_api_base_urls.get(provider))
     elif provider == "gemini":
-        api_key = settings_service.get_provider_api_key(provider) or settings.gemini_api_key
-        kwargs.setdefault("api_key", api_key)
+        kwargs.setdefault("api_key", provider_api_key or settings.gemini_api_key)
+    elif provider == "huggingface":
+        kwargs.setdefault("api_key", provider_api_key)
+        kwargs.setdefault("base_url", settings.provider_api_base_urls.get(provider))
     elif provider == "llama.cpp":
         runtime_path = settings.provider_local_runtime_paths.get("llama.cpp")
         if runtime_path:
@@ -540,12 +627,7 @@ def get_llm_service(
     if provider is None:
         # Use provider registry to resolve
         try:
-            registry = get_provider_registry(
-                primary_provider=settings.model_providers_primary,
-                secondary_provider=settings.model_providers_secondary,
-                api_base_urls=settings.provider_api_base_urls,
-                runtime_paths=settings.provider_local_runtime_paths,
-            )
+            registry = get_provider_registry()
             resolution: ProviderResolution = registry.resolve(ProviderCapability.CHAT)
             provider = resolution.provider.provider_id
             if model is None:

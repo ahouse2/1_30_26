@@ -53,3 +53,37 @@ You will start with a /newline above your entry. this is where your "title"
 
 
 
+
+@formatDateTime(convertFromUtc(utcnow(), 'Pacific Standard Time'), 'yyyy/MM/dd HH:mm:ss tt') Swarms Workflow Design
+- Authored the hybrid Swarms workflow design (pipeline default + modular teams) with phase registry, state deltas, and KG upserts.
+- Defined artifacts (JSON + Markdown) per phase and LlamaIndex integration points for parsing, chunking, indexing, retrieval.
+- Documented API surface and phase list in `docs/plans/2026-02-04-swarms-hybrid-workflow-design.md` and committed (df814f22).
+- Validation: not run (design-only change).
+- Notes/Next actions: proceed to implementation plan and confidence checks; address git non-monotonic pack index warning if it blocks future git ops.
+
+
+2026/02/04 07:24:50 PM Workflow Plan Setup
+- Created a clean worktree at `/Volumes/MAC_DEV/REPOS/2-4-26_tree` on branch `codex/swarms-hybrid-workflow` after removing a partial checkout.
+- Added a detailed implementation plan for the Swarms hybrid workflow in `docs/plans/2026-02-05-swarms-hybrid-workflow-implementation.md`.
+- Ran setup commands: `npm install` succeeded; `pip install -r backend/requirements.txt` failed due to network; `pytest` unavailable.
+- Validation results: backend/pytest could not run (missing pytest); frontend tests not run.
+- Next actions: run `executing-plans` to implement tasks once dependencies are available.
+
+
+2026/02/05 01:50:47 AM Workflow Phase Implementations
+- Implemented real phase handlers for fact extraction, legal theories, strategy, and drafting using RetrievalService, GraphService, KnowledgeGraphService, and LLM service.
+- Added workflow artifact persistence (JSON + Markdown) and attached artifacts to phase run results.
+- Updated workflow orchestration to upsert graph payloads and persist artifacts.
+- Added workflow API endpoints and frontend workflow page + nav link.
+- Updated architecture docs to reflect Swarms workflow orchestration and added capability map.
+- Tests not run (missing Python deps/pytest).
+
+
+2026/02/05 02:32:26 AM Graph Refinement + LlamaIndex Sync
+- Added graph extraction schema normalization and applied extraction payloads in workflow runs.
+- Implemented LlamaIndex node upsert into the graph and ensured parsing/chunking returns llama_nodes for sync.
+- Added a continuous graph refinement worker with idle-stop logic and restart API endpoint.
+- Enhanced indexing phase to upsert triples into graph and embeddings into vector store.
+- Docs updated with graph refinement controls.
+- Tests not run (deps missing).
+

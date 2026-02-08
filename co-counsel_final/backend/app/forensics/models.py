@@ -26,9 +26,12 @@ class AntiScanAlterRescanResult(BaseModel):
     details: str = Field(..., description="Details about the detected pattern.")
 
 class CryptoTracingResult(BaseModel):
-    detected: bool = Field(..., description="True if crypto address detected.")
-    details: str = Field(..., description="Details about tracing.")
-    address: Optional[str] = None
+    wallets_found: List[dict] = Field(default_factory=list)
+    transactions_traced: List[dict] = Field(default_factory=list)
+    clusters: List[dict] = Field(default_factory=list)
+    bridge_matches: List[dict] = Field(default_factory=list)
+    visual_graph_mermaid: Optional[str] = None
+    details: str = Field(..., description="Summary of the crypto tracing analysis.")
 
 
 class ForensicAnalysisResult(BaseModel):

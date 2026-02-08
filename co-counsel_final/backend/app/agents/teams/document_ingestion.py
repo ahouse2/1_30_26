@@ -12,8 +12,10 @@ from backend.app.services.document_processing_service import DocumentProcessingS
 class DocumentPreprocessingTool(AgentTool):
     def __init__(self):
         super().__init__("DocumentPreprocessingTool", "Preprocesses raw documents for ingestion.", self.preprocess)
-        self.service = DocumentProcessingService()
+        self.service: DocumentProcessingService | None = None
     async def preprocess(self, document_path: str) -> Dict[str, Any]:
+        if self.service is None:
+            self.service = DocumentProcessingService()
         return await self.service.preprocess_document(document_path)
 
 from backend.app.services.indexing_embedding_service import IndexingEmbeddingService
@@ -21,8 +23,10 @@ from backend.app.services.indexing_embedding_service import IndexingEmbeddingSer
 class ContentIndexingTool(AgentTool):
     def __init__(self):
         super().__init__("ContentIndexingTool", "Indexes document content and generates embeddings.", self.index_content)
-        self.service = IndexingEmbeddingService()
+        self.service: IndexingEmbeddingService | None = None
     async def index_content(self, document_id: str, content: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        if self.service is None:
+            self.service = IndexingEmbeddingService()
         return await self.service.index_document(document_id, content, metadata)
 
 from backend.app.services.knowledge_graph_service import KnowledgeGraphService
@@ -30,8 +34,10 @@ from backend.app.services.knowledge_graph_service import KnowledgeGraphService
 class KnowledgeGraphBuilderTool(AgentTool):
     def __init__(self):
         super().__init__("KnowledgeGraphBuilderTool", "Builds and updates the knowledge graph with document entities and relationships.", self.build_kg)
-        self.service = KnowledgeGraphService()
+        self.service: KnowledgeGraphService | None = None
     async def build_kg(self, entity_type: str, properties: Dict[str, Any], relationships: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+        if self.service is None:
+            self.service = KnowledgeGraphService()
         # Add the main entity
         entity_result = await self.service.add_entity(entity_type, properties)
         
@@ -56,8 +62,10 @@ from backend.app.services.database_query_service import DatabaseQueryService
 class DatabaseQueryTool(AgentTool):
     def __init__(self):
         super().__init__("DatabaseQueryTool", "Queries internal and external databases for relevant information.", self.query_db)
-        self.service = DatabaseQueryService()
+        self.service: DatabaseQueryService | None = None
     async def query_db(self, query_string: str, db_type: str = "sql") -> List[Dict[str, Any]]:
+        if self.service is None:
+            self.service = DatabaseQueryService()
         return await self.service.execute_query(query_string, db_type)
 
 from backend.app.services.llm_service import get_llm_service
@@ -65,8 +73,10 @@ from backend.app.services.llm_service import get_llm_service
 class DocumentSummaryTool(AgentTool):
     def __init__(self):
         super().__init__("DocumentSummaryTool", "Summarizes documents using advanced NLP models.", self.summarize_document)
-        self.llm_service = get_llm_service()
+        self.llm_service = None
     async def summarize_document(self, content: str) -> Dict[str, Any]:
+        if self.llm_service is None:
+            self.llm_service = get_llm_service()
         prompt = f"Please summarize the following document:\n\n{content[:8000]}..." # Truncate for LLM context
         summary = await self.llm_service.generate_text(prompt)
         return {"summary": summary}
@@ -185,7 +195,7 @@ def build_document_ingestion_team(tools: List[AgentTool]) -> Dict[str, Any]:
     Builds the Document Ingestion Team with redundancy and a 3-step QA process.
     """
     # This function would typically return a graph or a structured team object
-    # that the Microsoft Agents Framework can execute.
+    # that the Swarms Framework can execute.
     # For now, we return a dictionary representing the team structure.
 
     # All agents in this team

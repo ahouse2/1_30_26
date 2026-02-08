@@ -2,7 +2,7 @@
 
 Non‑Negotiables (North Star)
 - End result: production‑ready legal co‑counsel, worth $1000/mo, with stellar UX and explainable answers (citations + graph paths).
-- Stack alignment: MS Agents Framework + LlamaIndex/LlamaHub + Swarms; Neo4j + Qdrant/Chroma; React UI; Whisper/Coqui.
+- Stack alignment: swarms Framework + LlamaIndex/LlamaHub + Swarms; Neo4j + Qdrant/Chroma; React UI; Whisper/Coqui.
 - Cite‑or‑silence policy; strong observability and audit trails.
 - Forensics suite is not stubbed: real hashing, metadata, structure, and authenticity/manipulation analysis for documents/images/media; financial forensics (basic first pass) included.
 - Ingestion uses both OCR and a Vision‑LLM agent for classification, tagging, and scanned‑document understanding.

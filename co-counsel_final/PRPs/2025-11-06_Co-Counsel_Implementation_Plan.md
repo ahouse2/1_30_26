@@ -24,7 +24,7 @@ This document outlines the comprehensive implementation plan for the Co-Counsel 
 ## Research Findings
 ### Best Practices
 - **Modular Design:** Emphasize clear separation of concerns for backend services (FastAPI routers, domain-specific modules) and frontend components (pages, components, services).
-- **Agentic System Design:** Utilize a robust agent orchestration framework (e.g., Microsoft Agents Framework SDK) with clear roles (Planner, Executor, Facade) for each agent team.
+- **Agentic System Design:** Utilize a robust agent orchestration framework (e.g., Swarms) with clear roles (Planner, Executor, Facade) for each agent team.
 - **Data Security:** Implement encryption at rest and in transit, secure access controls, and strict data segregation to meet compliance requirements (HIPAA, SOC 2).
 - **Scalable Data Storage:** Employ specialized databases like Neo4j for knowledge graphs and vector stores (Qdrant/Chroma) for efficient retrieval.
 - **Responsive & Performant UI:** Leverage modern frontend frameworks (React, TailwindCSS, Framer Motion) for a dynamic and smooth user experience.
@@ -36,7 +36,7 @@ This document outlines the comprehensive implementation plan for the Co-Counsel 
 - **Frontend Modularity:** The `frontend/src` structure with `components`, `pages`, `services`, `styles`, and `types` provides a clear roadmap for UI development.
 
 ### Technology Decisions
-- **Backend:** Python, FastAPI, Microsoft Agents Framework SDK, PostgreSQL, Neo4j, Qdrant/Chroma.
+- **Backend:** Python, FastAPI, Swarms, PostgreSQL, Neo4j, Qdrant/Chroma.
 - **Frontend:** React, TypeScript, Vite, TailwindCSS, shadcn/ui, Framer Motion, OpenAvatarChat.
 - **Deployment:** Docker, Docker Compose for local development; one-click installers for production.
 - **Security:** AES-256 encryption.
@@ -283,7 +283,7 @@ graph TD
 -   `POST /api/auth/register`: User registration.
 
 ## Dependencies and Libraries
--   **Backend:** `FastAPI`, `SQLAlchemy` (or similar ORM), `Neo4j` driver, `Qdrant` client, `Microsoft Agents Framework SDK`, `Pydantic`, `python-multipart`, `python-jose`, `passlib`, `uvicorn`.
+-   **Backend:** `FastAPI`, `SQLAlchemy` (or similar ORM), `Neo4j` driver, `Qdrant` client, `Swarms`, `Pydantic`, `python-multipart`, `python-jose`, `passlib`, `uvicorn`.
 -   **Frontend:** `React`, `TypeScript`, `Vite`, `TailwindCSS`, `shadcn/ui`, `Framer Motion`, `React Router`, `React Query`, `OpenAvatarChat` (or similar avatar library), `Web Speech API` (for STT/TTS).
 -   **Deployment:** `Docker`, `Docker Compose`, `PyInstaller` (for .exe), `electron-builder` (for .dmg, .deb - potential solution).
 

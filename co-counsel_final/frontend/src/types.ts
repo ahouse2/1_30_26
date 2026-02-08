@@ -101,6 +101,10 @@ export interface ProviderSettingsUpdatePayload {
 export interface CredentialSettingsUpdatePayload {
   provider_api_keys?: Record<string, string | null>;
   courtlistener_token?: string | null;
+  pacer_api_key?: string | null;
+  unicourt_api_key?: string | null;
+  lacs_api_key?: string | null;
+  caselaw_api_key?: string | null;
   research_browser_api_key?: string | null;
 }
 
@@ -112,6 +116,16 @@ export interface SettingsUpdatePayload {
   providers?: ProviderSettingsUpdatePayload;
   credentials?: CredentialSettingsUpdatePayload;
   appearance?: AppearanceSettingsUpdatePayload;
+}
+
+export interface CourtProviderStatusEntry {
+  provider_id: string;
+  ready: boolean;
+  reason?: string | null;
+}
+
+export interface CourtProviderStatusResponse {
+  providers: CourtProviderStatusEntry[];
 }
 
 export interface OutcomeProbability {
@@ -142,6 +156,29 @@ export interface TimelineResponse {
     limit: number;
     has_more: boolean;
   };
+}
+
+export type TimelineExportFormat = 'md' | 'pdf' | 'xlsx' | 'html';
+
+export interface TimelineExportResponse {
+  export_id: string;
+  format: TimelineExportFormat;
+  filename: string;
+  download_url: string;
+  created_at: string;
+}
+
+export interface StoryboardScene {
+  id: string;
+  title: string;
+  narrative: string;
+  citations: string[];
+  visual_prompt?: string | null;
+}
+
+export interface StoryboardResponse {
+  generated_at: string;
+  scenes: StoryboardScene[];
 }
 
 export interface QueryResponse {

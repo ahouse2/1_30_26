@@ -9,7 +9,7 @@
   - #### 0.1.2 Deliver regression coverage for new behaviours (pagination windowing, entity/source filters, rerank boost path, 204 guardrail).
 
 - ### 0.2 Inputs
-  - #### 0.2.1 Specs: `docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_spec.md` (§GET /query).
+  - #### 0.2.1 Specs: `docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_Swarms_LlamaIndex_Swarms_spec.md` (§GET /query).
   - #### 0.2.2 Existing implementations: `backend/app/services/ingestion.py`, `backend/app/services/retrieval.py`, `backend/app/main.py`, `backend/app/models/api.py`, `backend/tests/test_api.py`.
   - #### 0.2.3 Tooling baseline: Qdrant in-memory index, GraphService memory path, ForensicsService artifacts.
 
@@ -79,7 +79,7 @@
   - #### 4.1.3 Add 204 expectation check via `rerank` or `filters` when evidence missing.
 
 ## 5. Documentation & Stewardship
-- ### 5.1 Update `docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_tasks.md`
+- ### 5.1 Update `docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_Swarms_LlamaIndex_Swarms_tasks.md`
   - #### 5.1.1 Mark `/query Enhancements` checklist item as complete with note referencing files/tests.
 
 - ### 5.2 Build Log Entry

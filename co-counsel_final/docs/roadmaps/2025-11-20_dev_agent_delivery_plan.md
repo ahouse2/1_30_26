@@ -23,7 +23,7 @@
   - Paragraph · Encode `DevTeamPlanner` to transform a `FeatureRequest` into an `ImprovementTaskRecord`, deduping by feature request ID and capturing planner notes + risk tags.
 - ### Chapter 2.2 · Executor Persona
   - Paragraph · Implement `DevTeamExecutor` to craft `PatchProposalRecord` instances, invoking sandbox harness validation previews and persisting telemetry.
-  - Paragraph · Embed Microsoft Agents semantics via planner/executor naming, telemetry hooks, and actor metadata propagation.
+  - Paragraph · Embed Swarms semantics via planner/executor naming, telemetry hooks, and actor metadata propagation.
 
 ## Phase 3 · Sandbox Harness (Book: Validation)
 - ### Chapter 3.1 · Workspace Fabrication

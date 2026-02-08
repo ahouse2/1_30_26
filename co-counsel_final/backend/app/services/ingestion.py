@@ -180,7 +180,14 @@ class IngestionService:
 
         job_id = str(uuid4())
         submitted_at = datetime.now(timezone.utc)
-        automation_payload = request.automation.model_dump(exclude_none=True) if request.automation else None
+        if request.automation:
+            automation_payload = request.automation.model_dump(exclude_none=True)
+        else:
+            automation_payload = {
+                "auto_run": request.auto_run,
+                "stages": request.phases or [],
+                "case_id": request.case_id,
+            }
         job_record = self._initialise_job_record(
             job_id,
             submitted_at,
@@ -568,6 +575,35 @@ class IngestionService:
             },
             actor=self._job_actor(job_record),
         )
+
+        self._after_ingestion(
+            case_id=getattr(request, "case_id", None) or job_id,
+            auto_run=getattr(request, "auto_run", True),
+            phases=getattr(request, "phases", None) or [],
+        )
+
+
+    def _after_ingestion(self, case_id: str, auto_run: bool, phases: list[str]) -> None:
+        if not auto_run:
+            return
+        workflow = getattr(self, "workflow_service", None)
+        if workflow is None:
+            from .workflow import CaseWorkflowService
+            workflow = CaseWorkflowService(self.settings.workflow_storage_path)
+        workflow.run_phases(case_id=case_id, phases=phases or [
+            "ingestion",
+            "preprocess",
+            "forensics",
+            "parsing_chunking",
+            "indexing",
+            "court_sync",
+            "fact_extraction",
+            "timeline",
+            "legal_theories",
+            "strategy",
+            "drafting",
+            "qa_review",
+        ], payload={})
 
     def _ensure_job_defaults(
         self, job_record: Dict[str, object], sources: List[IngestionSource]
@@ -1106,6 +1142,130 @@ def _handle_ingestion_task(task: IngestionTask) -> None:
         # Job manifest already records failure details; suppress to avoid worker crash logs.
         return
 
+
+
+
+    def _latest_job_record(self) -> dict | None:
+        jobs = self.job_store.list_jobs()
+        if not jobs:
+            return None
+        return sorted(jobs, key=lambda item: item.get("updated_at", ""))[-1]
+
+    def _sources_from_job(self, job_record: dict) -> list[IngestionSource]:
+        sources = job_record.get("sources", [])
+        return [IngestionSource(**source) for source in sources]
+
+    def summarize_latest(self, case_id: str) -> dict:
+        jobs = self.job_store.list_jobs()
+        if not jobs:
+            return {"case_id": case_id, "status": "unknown", "job": None}
+        latest = sorted(jobs, key=lambda item: item.get("updated_at", ""))[-1]
+        return {"case_id": case_id, "status": latest.get("status"), "job": latest}
+
+    def preprocess_case(self, case_id: str) -> dict:
+        # Currently a no-op placeholder; returns summary for now
+        return {"case_id": case_id, "status": "completed", "step": "preprocess"}
+
+    def parse_and_chunk(self, case_id: str) -> dict:
+
+        job = self._latest_job_record()
+        if not job:
+            return {"case_id": case_id, "status": "skipped", "reason": "no_jobs"}
+        sources = self._sources_from_job(job)
+        results = []
+        for index, source in enumerate(sources):
+            connector = build_connector(source.type, self.settings, self.credential_registry, self.logger)
+            materialized = connector.materialize(job["job_id"], index, source)
+            result = run_ingestion_pipeline(
+                job["job_id"],
+                materialized.root,
+                source,
+                materialized.origin or source.type,
+                registry=self.loader_registry,
+                runtime_config=self.runtime_config,
+            )
+            results.append(result)
+        return {
+            "case_id": case_id,
+            "status": "completed",
+            "step": "parsing_chunking",
+            "documents": sum(len(r.documents) for r in results),
+            "nodes": sum(r.node_count for r in results),
+            "llama_nodes": [
+                {
+                    "id": node.node_id,
+                    "type": "Chunk",
+                    "properties": node.metadata | {"text": node.text},
+                }
+                for r in results
+                for doc in r.documents
+                for node in doc.nodes
+            ],
+        }
+
+    def index_case(self, case_id: str) -> dict:
+
+        job = self._latest_job_record()
+        if not job:
+            return {"case_id": case_id, "status": "skipped", "reason": "no_jobs"}
+        sources = self._sources_from_job(job)
+        total_nodes = 0
+        for index, source in enumerate(sources):
+            connector = build_connector(source.type, self.settings, self.credential_registry, self.logger)
+            materialized = connector.materialize(job["job_id"], index, source)
+            result = run_ingestion_pipeline(
+                job["job_id"],
+                materialized.root,
+                source,
+                materialized.origin or source.type,
+                registry=self.loader_registry,
+                runtime_config=self.runtime_config,
+            )
+            for doc in result.documents:
+                total_nodes += len(doc.nodes)
+                for triple in doc.triples:
+                    self.graph_service.upsert_entity(
+                        triple.subject.label,
+                        triple.subject.entity_type,
+                        {"label": triple.subject.label},
+                    )
+                    self.graph_service.upsert_entity(
+                        triple.obj.label,
+                        triple.obj.entity_type,
+                        {"label": triple.obj.label},
+                    )
+                    self.graph_service.merge_relation(
+                        triple.subject.label,
+                        triple.predicate.upper(),
+                        triple.obj.label,
+                        {"evidence": triple.evidence},
+                    )
+                try:
+                    from qdrant_client.http import models as qmodels
+                except Exception:
+                    qmodels = None
+                if qmodels is not None:
+                    points = [
+                        qmodels.PointStruct(
+                            id=node.node_id,
+                            vector=node.embedding,
+                            payload={
+                                "text": node.text,
+                                "case_id": case_id,
+                                **node.metadata,
+                            },
+                        )
+                        for node in doc.nodes
+                    ]
+                    if points:
+                        self.vector_service.upsert(points)
+        return {
+            "case_id": case_id,
+            "status": "completed",
+            "step": "indexing",
+            "nodes": total_nodes,
+            "graph": {"nodes": [], "edges": []},
+        }
 
 def get_ingestion_worker() -> IngestionWorker:
     global _WORKER_INSTANCE

@@ -6,7 +6,7 @@
   - #### 0.1.2 Layer OAuth2 bearer verification with JWKS-backed signature checks and tenant-aligned claims.
   - #### 0.1.3 Apply RBAC/ABAC policies through Oso so that scopes + roles govern endpoint behaviour per PRP spec.
 - ### 0.2 Inputs
-  - #### 0.2.1 Specs: `PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_spec.md` §§APIs `/ingest`, `/query`, `/timeline`, `/graph`, `/forensics`.
+  - #### 0.2.1 Specs: `PRP_CoCounsel_Swarms_LlamaIndex_Swarms_spec.md` §§APIs `/ingest`, `/query`, `/timeline`, `/graph`, `/forensics`.
   - #### 0.2.2 Validation backlog: `docs/validation/2025-11-07_prp_status_review_tasks.md` security items (mTLS, OAuth2, RBAC).
   - #### 0.2.3 Existing runtime: FastAPI app (`backend/app/main.py`), settings (`backend/app/config.py`), services/tests under `backend/`.
 
@@ -59,7 +59,7 @@
 - ### 5.1 Update Validation Backlog
   - #### 5.1.1 Mark completed tasks in `docs/validation/2025-11-07_prp_status_review_tasks.md` with implementation notes/tests.
 - ### 5.2 Task List Updates
-  - #### 5.2.1 Reflect Phase 8 security milestone progress in `PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_tasks.md` and master task list if applicable.
+  - #### 5.2.1 Reflect Phase 8 security milestone progress in `PRP_CoCounsel_Swarms_LlamaIndex_Swarms_tasks.md` and master task list if applicable.
 - ### 5.3 Logs & Memory
   - #### 5.3.1 Append build log entry (`build_logs/2025-11-12.md`) capturing ACE cycle + tests.
   - #### 5.3.2 Record ACE state update in `memory/ace_state.jsonl` summarising retriever/planner/critic decisions.

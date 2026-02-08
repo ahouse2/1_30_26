@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 from fastapi import HTTPException, status
 
-from agents.toolkit.sandbox import SandboxExecutionHarness, SandboxExecutionResult
+from backend.app.agents.agents.toolkit.sandbox import SandboxExecutionHarness, SandboxExecutionResult
 
 from ..agents.dev_team import DevTeamAgent, FeatureRequest, ProposalContext
 from ..config import get_settings

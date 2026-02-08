@@ -30,11 +30,11 @@ This playbook codifies the hardware assumptions, synthetic load profiles, and va
 | Observability | Forensics telemetry coverage | Stage spans + metrics (`forensics_pipeline_duration_ms`, `forensics_stage_duration_ms`, `forensics_reports_total`) | OTLP dashboard `forensics-pipeline` | Enable telemetry env vars then `pytest backend/tests/test_telemetry.py -q` |
 
 ## Offline Tolerance
-1. Start the stack: `docker compose -f infra/docker-compose.yml up -d`.
+1. Start the stack: `docker compose --profile prod up -d`.
 2. Begin an ingest run that produces at least 150 documents/hour (repeat ingestion of the reference workspace via API).
-3. Stop Neo4j and Qdrant containers: `docker compose -f infra/docker-compose.yml stop neo4j qdrant` while continuing to enqueue ingest requests (they should persist on disk).
+3. Stop Neo4j and Qdrant containers: `docker compose --profile prod stop neo4j qdrant` while continuing to enqueue ingest requests (they should persist on disk).
 4. Maintain the outage window for up to 12 hours, ensuring API writes manifests to `JOB_STORE_DIR` without errors.
-5. Restart dependencies: `docker compose -f infra/docker-compose.yml start neo4j qdrant` and reprocess queued jobs via the normal ingestion retry mechanism.
+5. Restart dependencies: `docker compose --profile prod start neo4j qdrant` and reprocess queued jobs via the normal ingestion retry mechanism.
 6. Validate job manifests and document store contents for continuity. Any data loss invalidates the SLO.
 
 ## Notes

@@ -33,7 +33,7 @@ This guide documents the required spans, metrics, log fields, and context propag
 
 ## Acceptance Criteria and Sample Artifacts
 1. **Local verification**
-   - Use Docker Compose to start services and confirm the FastAPI health check (`docker compose -f infra/docker-compose.yml up -d --build api`, `curl http://localhost:8000/health`).
+   - Use Docker Compose to start services and confirm the FastAPI health check (`docker compose --profile prod up -d --build api`, `curl http://localhost:8000/health`).
    - Execute representative ingestion and research requests; verify the OpenTelemetry collector receives spans `http.server.request`, `workflow.ingestion`, `workflow.research`, etc., each populated with the identifiers and attributes listed above.
 2. **CI verification**
    - Run smoke scenarios in the pipeline with exporters targeting the CI telemetry backend.
@@ -87,4 +87,3 @@ This guide documents the required spans, metrics, log fields, and context propag
    ```
 5. **Metric expectations**
    - After a successful ingestion and research run, counters `ingestion.documents`, `ingestion.chunks_indexed`, `graph.entities_upserted`, `retrieval.vector_latency`, and `forensics.artifacts_generated` must report non-zero samples, reflecting the mandatory workflow steps.
-

@@ -21,6 +21,7 @@ from ..models.api import (
 from ..providers import registry as registry_module
 from ..providers.catalog import MODEL_CATALOG, ModelInfo, ProviderCapability
 from ..storage.settings_store import SettingsStore
+from .provider_models import get_provider_model_refresh_service, ProviderModelRefreshService
 
 
 class SettingsValidationError(ValueError):
@@ -62,7 +63,45 @@ class SettingsService:
         return self._build_response(state)
 
     def model_catalog(self) -> ModelCatalogResponse:
-        return ModelCatalogResponse(providers=self._build_catalog())
+        state = self._load_state()
+        providers_state: Dict[str, Any] = state.get("providers", {})
+        api_base_urls = self._compose_api_base_urls(providers_state.get("api_base_urls", {}))
+        refresh_service = get_provider_model_refresh_service()
+        return ModelCatalogResponse(
+            providers=self._build_catalog(
+                api_base_urls=api_base_urls,
+                refresh_service=refresh_service,
+            )
+        )
+
+    def refresh_model_catalog(self, provider_id: str) -> ModelCatalogResponse:
+        state = self._load_state()
+        providers_state: Dict[str, Any] = state.get("providers", {})
+        credentials_state: Dict[str, Any] = state.get("credentials", {})
+        api_base_urls = self._compose_api_base_urls(providers_state.get("api_base_urls", {}))
+        provider_api_keys: Dict[str, str] = credentials_state.get("provider_api_keys", {})
+
+        self._ensure_provider_exists(provider_id)
+
+        refresh_service = get_provider_model_refresh_service()
+        refresh_service.refresh(
+            provider_id,
+            base_url=api_base_urls.get(provider_id),
+            api_key=provider_api_keys.get(provider_id),
+        )
+
+        return ModelCatalogResponse(
+            providers=self._build_catalog(
+                api_base_urls=api_base_urls,
+                refresh_service=refresh_service,
+            )
+        )
+
+    def get_provider_api_key(self, provider_id: str) -> Optional[str]:
+        state = self._load_state()
+        credentials_state: Dict[str, Any] = state.get("credentials", {})
+        provider_api_keys: Dict[str, str] = credentials_state.get("provider_api_keys", {})
+        return _normalise_secret(provider_api_keys.get(provider_id))
 
     def get_provider_api_key(self, provider_id: str) -> Optional[str]:
         state = self._load_state()
@@ -107,12 +146,17 @@ class SettingsService:
         ]
         services_status = {
             "courtlistener": bool(_normalise_secret(credentials_state.get("courtlistener_token"))),
+            "pacer": bool(_normalise_secret(credentials_state.get("pacer_api_key"))),
+            "unicourt": bool(_normalise_secret(credentials_state.get("unicourt_api_key"))),
+            "lacs": bool(_normalise_secret(credentials_state.get("lacs_api_key"))),
+            "caselaw": bool(_normalise_secret(credentials_state.get("caselaw_api_key"))),
             "research_browser": bool(_normalise_secret(credentials_state.get("research_browser_api_key"))),
         }
 
         theme = appearance_state.get("theme") or "system"
         updated_at = _parse_timestamp(state.get("updated_at"))
 
+        refresh_service = get_provider_model_refresh_service()
         return SettingsResponse(
             providers=ProviderSettingsSnapshotModel(
                 primary=primary,
@@ -120,7 +164,10 @@ class SettingsService:
                 defaults=defaults,
                 api_base_urls=api_base_urls,
                 local_runtime_paths=runtime_paths,
-                available=self._build_catalog(),
+                available=self._build_catalog(
+                    api_base_urls=api_base_urls,
+                    refresh_service=refresh_service,
+                ),
             ),
             credentials=CredentialsSnapshotModel(
                 providers=provider_status,
@@ -150,10 +197,11 @@ class SettingsService:
 
         if update.defaults is not None:
             defaults = providers.setdefault("defaults", {})
+            api_base_urls = self._compose_api_base_urls(providers.get("api_base_urls", {}))
             for raw_key, model_id in update.defaults.items():
                 capability = self._normalise_capability(raw_key)
                 if model_id:
-                    self._ensure_model_exists(model_id)
+                    self._ensure_model_exists(model_id, api_base_urls=api_base_urls)
                     defaults[capability] = model_id
                 else:
                     defaults.pop(capability, None)
@@ -193,6 +241,18 @@ class SettingsService:
 
         if "courtlistener_token" in update.model_fields_set:
             credentials["courtlistener_token"] = _normalise_secret(update.courtlistener_token)
+
+        if "pacer_api_key" in update.model_fields_set:
+            credentials["pacer_api_key"] = _normalise_secret(update.pacer_api_key)
+
+        if "unicourt_api_key" in update.model_fields_set:
+            credentials["unicourt_api_key"] = _normalise_secret(update.unicourt_api_key)
+
+        if "lacs_api_key" in update.model_fields_set:
+            credentials["lacs_api_key"] = _normalise_secret(update.lacs_api_key)
+
+        if "caselaw_api_key" in update.model_fields_set:
+            credentials["caselaw_api_key"] = _normalise_secret(update.caselaw_api_key)
 
         if "research_browser_api_key" in update.model_fields_set:
             credentials["research_browser_api_key"] = _normalise_secret(update.research_browser_api_key)
@@ -235,12 +295,25 @@ class SettingsService:
                 combined.pop(provider_id, None)
         return combined
 
-    def _build_catalog(self) -> List[ProviderCatalogEntryModel]:
+    def _build_catalog(
+        self,
+        *,
+        api_base_urls: Dict[str, str] | None = None,
+        refresh_service: ProviderModelRefreshService | None = None,
+    ) -> List[ProviderCatalogEntryModel]:
         entries: List[ProviderCatalogEntryModel] = []
         for provider_id, models in MODEL_CATALOG.items():
+            merged_models = self._merge_models(
+                models,
+                refresh_service.get_cached(provider_id, base_url=api_base_urls.get(provider_id))
+                if refresh_service and api_base_urls
+                else (),
+            )
             adapter_cls = registry_module.ADAPTER_TYPES.get(provider_id)
             display_name = adapter_cls.display_name if adapter_cls else provider_id
-            capabilities = sorted({capability.value for model in models for capability in model.capabilities})
+            capabilities = sorted(
+                {capability.value for model in merged_models for capability in model.capabilities}
+            )
             model_entries = [
                 ProviderModelInfoModel(
                     model_id=model.model_id,
@@ -250,7 +323,7 @@ class SettingsService:
                     capabilities=[cap.value for cap in model.capabilities],
                     availability=model.availability,
                 )
-                for model in models
+                for model in merged_models
             ]
             entries.append(
                 ProviderCatalogEntryModel(
@@ -263,13 +336,34 @@ class SettingsService:
         entries.sort(key=lambda entry: entry.provider_id)
         return entries
 
+    @staticmethod
+    def _merge_models(
+        static_models: Iterable[ModelInfo],
+        dynamic_models: Iterable[ModelInfo],
+    ) -> tuple[ModelInfo, ...]:
+        merged = list(static_models)
+        static_ids = {model.model_id for model in static_models}
+        for model in dynamic_models:
+            if model.model_id not in static_ids:
+                merged.append(model)
+        return tuple(merged)
+
     def _ensure_provider_exists(self, provider_id: str) -> None:
         if provider_id not in MODEL_CATALOG:
             raise SettingsValidationError(f"Unsupported provider '{provider_id}'")
 
-    def _ensure_model_exists(self, model_id: str) -> None:
-        if not any(self._model_matches(model_id, models) for models in MODEL_CATALOG.values()):
-            raise SettingsValidationError(f"Unknown model identifier '{model_id}'")
+    def _ensure_model_exists(self, model_id: str, *, api_base_urls: Dict[str, str] | None = None) -> None:
+        if any(self._model_matches(model_id, models) for models in MODEL_CATALOG.values()):
+            return
+
+        api_base_urls = api_base_urls or self._compose_api_base_urls({})
+        refresh_service = get_provider_model_refresh_service()
+        for provider_id, base_url in api_base_urls.items():
+            for model in refresh_service.get_cached(provider_id, base_url=base_url):
+                if model.model_id == model_id:
+                    return
+
+        raise SettingsValidationError(f"Unknown model identifier '{model_id}'")
 
     @staticmethod
     def _model_matches(model_id: str, models: Iterable[ModelInfo]) -> bool:

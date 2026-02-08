@@ -1,15 +1,26 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field, HttpUrl, ConfigDict
+
+
+class SourceType(str, Enum):
+    FILE = "file"
+    FOLDER = "folder"
+    URL = "web"
+    S3 = "s3"
 
 
 class IngestionSource(BaseModel):
     type: str = Field(description="Source type identifier")
     path: Optional[str] = Field(default=None, description="Filesystem path for local sources")
     credRef: Optional[str] = Field(default=None, description="Credential reference for remote sources")
+    source_id: Optional[str] = Field(default=None, description="Optional source identifier")
+    uri: Optional[str] = Field(default=None, description="Optional source URI")
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class AutomationPreferences(BaseModel):
@@ -26,6 +37,10 @@ class AutomationPreferences(BaseModel):
 
 class IngestionRequest(BaseModel):
     sources: List[IngestionSource]
+    case_id: Optional[str] = None
+    auto_run: bool = True
+    phases: List[str] = Field(default_factory=list)
+    automation: Optional["AutomationPreferences"] = None
     automation: Optional["AutomationPreferences"] = None
 
 
@@ -219,6 +234,39 @@ class TimelinePaginationModel(BaseModel):
     has_more: bool
 
 
+class TimelineExportRequestModel(BaseModel):
+    format: Literal["md", "pdf", "xlsx", "html"]
+    case_id: Optional[str] = None
+    entity: Optional[str] = None
+    from_ts: Optional[datetime] = None
+    to_ts: Optional[datetime] = None
+    risk_band: Optional[str] = None
+    motion_due_before: Optional[datetime] = None
+    motion_due_after: Optional[datetime] = None
+    storyboard: bool = False
+
+
+class TimelineExportResponseModel(BaseModel):
+    export_id: str
+    format: Literal["md", "pdf", "xlsx", "html"]
+    filename: str
+    download_url: str
+    created_at: str
+
+
+class StoryboardSceneModel(BaseModel):
+    id: str
+    title: str
+    narrative: str
+    citations: List[str] = Field(default_factory=list)
+    visual_prompt: Optional[str] = None
+
+
+class StoryboardResponseModel(BaseModel):
+    generated_at: str
+    scenes: List[StoryboardSceneModel]
+
+
 class GraphNodeModel(BaseModel):
     id: str
     type: str
@@ -276,6 +324,10 @@ class GraphStrategyBriefModel(BaseModel):
 class GraphNeighborResponse(BaseModel):
     nodes: List[GraphNodeModel]
     edges: List[GraphEdgeModel]
+
+
+class GraphSearchResponse(BaseModel):
+    nodes: List[GraphNodeModel]
 
 
 class ForensicsStageModel(BaseModel):
@@ -568,6 +620,10 @@ class SandboxCommandResultModel(BaseModel):
     stdout: str
     stderr: str
     duration_ms: float
+
+
+class SandboxCommandRequestModel(BaseModel):
+    command: List[str]
 
 
 class SandboxExecutionModel(BaseModel):
@@ -897,6 +953,10 @@ class ModelCatalogResponse(BaseModel):
     providers: List[ProviderCatalogEntryModel]
 
 
+class SettingsModelRefreshRequest(BaseModel):
+    provider_id: str
+
+
 class ProviderSettingsSnapshotModel(BaseModel):
     primary: str
     secondary: Optional[str]
@@ -927,6 +987,60 @@ class SettingsResponse(BaseModel):
     updated_at: Optional[datetime]
 
 
+class CourtProviderStatusEntry(BaseModel):
+    provider_id: str
+    ready: bool
+    reason: Optional[str] = None
+
+
+class CourtProviderStatusResponse(BaseModel):
+    providers: List[CourtProviderStatusEntry]
+
+
+class CourtSearchRequest(BaseModel):
+    provider_id: str
+    query: str
+    jurisdiction: Optional[str] = None
+    limit: int = 10
+    filters: Optional[Dict[str, Any]] = None
+
+
+class CourtSearchResponse(BaseModel):
+    results: List[Dict[str, Any]]
+
+
+class CourtDocumentFetchRequest(BaseModel):
+    provider_id: str
+    case_id: str
+    docket_id: Optional[str] = None
+    document_id: str
+    paid: bool = False
+    amount_estimate: Optional[float] = None
+    currency: str = "USD"
+    requested_by: Optional[str] = None
+
+
+class CourtDocumentFetchResponse(BaseModel):
+    status: str
+    ledger_id: Optional[str] = None
+    document: Optional[Dict[str, Any]] = None
+
+
+class CourtPaymentAuthorizeRequest(BaseModel):
+    provider_id: str
+    case_id: str
+    docket_id: Optional[str] = None
+    document_id: Optional[str] = None
+    amount_actual: Optional[float] = None
+    currency: str = "USD"
+    authorized_by: Optional[str] = None
+    ledger_id: Optional[str] = None
+
+
+class CourtPaymentAuthorizeResponse(BaseModel):
+    status: str
+
+
 class ProviderSettingsUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -942,6 +1056,10 @@ class CredentialSettingsUpdate(BaseModel):
 
     provider_api_keys: Optional[Dict[str, Optional[str]]] = None
     courtlistener_token: Optional[str] = None
+    pacer_api_key: Optional[str] = None
+    unicourt_api_key: Optional[str] = None
+    lacs_api_key: Optional[str] = None
+    caselaw_api_key: Optional[str] = None
     research_browser_api_key: Optional[str] = None
 
 

@@ -29,7 +29,7 @@
   - 1.2.4 Author `session.py` to persist session metadata/audio artefacts atomically under `voice_sessions_dir`.
     - 1.2.4.1 Encode `VoiceSession` dataclass, JSON serialisation, and guard rails for identifier sanitisation.
   - 1.2.5 Compose `service.py` orchestrating STT -> AgentsService -> sentiment -> TTS.
-    - 1.2.5.1 Support session creation + follow-up turns bound to Microsoft Agents conversation state.
+    - 1.2.5.1 Support session creation + follow-up turns bound to Swarms conversation state.
     - 1.2.5.2 Persist transcripts + sentiment inside thread memory and session store.
     - 1.2.5.3 Emit structured telemetry for pacing + persona usage.
 
@@ -83,11 +83,10 @@
 ## 5. Deployment & Documentation Phase
 - 5.1 Containerisation updates
   - 5.1.1 Expand `backend/Dockerfile` to install system deps (ffmpeg/libsndfile) and prime Whisper/TTS models under `/models`.
-  - 5.1.2 Update `infra/docker-compose.yml` with bind mounts/volumes for `voice_models` + optional GPU runtime flags.
+  - 5.1.2 Update `docker-compose.yml` (prod profile) with bind mounts/volumes for `voice_models` + optional GPU runtime flags.
 - 5.2 Artefact caching guidance
   - 5.2.1 Document caching strategy in `docs/voice/hardware_requirements.md`, covering GPU (RTX 4090) vs CPU fallback (AVX2) envelopes.
   - 5.2.2 Outline environment variables for persona selection + compute preference.
 - 5.3 Stewardship updates
   - 5.3.1 Append build log entry summarising execution + validations.
   - 5.3.2 Record ACE memory capsule + AGENTS chain-of-stewardship entry.
-

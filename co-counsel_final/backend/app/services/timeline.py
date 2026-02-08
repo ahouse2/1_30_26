@@ -4,6 +4,7 @@ import base64
 import binascii
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 from math import exp
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -11,6 +12,7 @@ from opentelemetry import metrics
 
 from ..config import get_settings
 from ..storage.timeline_store import TimelineStore, TimelineEvent
+from ..storage.timeline_exports import TimelineExportStore, TimelineExportRecord
 from ..utils.triples import normalise_entity_id
 from .errors import WorkflowAbort, WorkflowComponent, WorkflowError, WorkflowSeverity
 from .graph import GraphNode, GraphService, get_graph_service
@@ -55,10 +57,13 @@ class TimelineService:
         *,
         store: TimelineStore | None = None,
         graph_service: GraphService | None = None,
+        export_store: TimelineExportStore | None = None,
     ) -> None:
         self.settings = get_settings()
         self.store = store or TimelineStore(self.settings.timeline_path)
         self.graph_service = graph_service or get_graph_service()
+        export_base = self.settings.workflow_storage_path / "timeline_exports"
+        self.export_store = export_store or TimelineExportStore(export_base)
 
     def refresh_enrichments(self) -> EnrichmentStats:
         events = self.store.read_all()
@@ -138,6 +143,227 @@ class TimelineService:
             )
 
         return TimelineQueryResult(events=limited, next_cursor=next_cursor, limit=bounded_limit, has_more=has_more)
+
+    def export_timeline(
+        self,
+        *,
+        export_format: str,
+        case_id: Optional[str] = None,
+        entity: Optional[str] = None,
+        from_ts: Optional[datetime] = None,
+        to_ts: Optional[datetime] = None,
+        risk_band: Optional[str] = None,
+        motion_due_before: Optional[datetime] = None,
+        motion_due_after: Optional[datetime] = None,
+        storyboard: bool = False,
+    ) -> TimelineExportRecord:
+        result = self.list_events(
+            entity=entity,
+            from_ts=from_ts,
+            to_ts=to_ts,
+            risk_band=risk_band,
+            motion_due_before=motion_due_before,
+            motion_due_after=motion_due_after,
+            limit=100,
+        )
+        events = result.events
+        now_iso = datetime.now(timezone.utc).isoformat()
+        if storyboard:
+            scenes = self.build_storyboard(events)
+        else:
+            scenes = []
+        if export_format == "md":
+            content = self._render_markdown(events, scenes=scenes, generated_at=now_iso)
+            filename = "timeline.md"
+            payload = content.encode("utf-8")
+        elif export_format == "html":
+            content = self._render_html(events, scenes=scenes, generated_at=now_iso)
+            filename = "timeline.html"
+            payload = content.encode("utf-8")
+        elif export_format == "xlsx":
+            payload = self._render_xlsx(events, scenes=scenes)
+            filename = "timeline.xlsx"
+        elif export_format == "pdf":
+            payload = self._render_pdf(events, scenes=scenes, generated_at=now_iso)
+            filename = "timeline.pdf"
+        else:
+            raise ValueError("Unsupported export format")
+
+        return self.export_store.save_export(case_id, export_format, payload, filename)
+
+    def build_storyboard(self, events: List[TimelineEvent]) -> List[Dict[str, str]]:
+        scenes: List[Dict[str, str]] = []
+        for index, event in enumerate(events, start=1):
+            narrative = event.summary.strip()
+            if event.citations:
+                narrative += f" (Citations: {', '.join(event.citations[:5])})"
+            scenes.append(
+                {
+                    "id": event.id,
+                    "title": f"Scene {index}: {event.title}",
+                    "narrative": narrative,
+                    "visual_prompt": f"Illustration of {event.title}." if event.title else None,
+                    "citations": list(event.citations),
+                }
+            )
+        return scenes
+
+    @staticmethod
+    def _render_markdown(
+        events: List[TimelineEvent],
+        *,
+        scenes: List[Dict[str, str]],
+        generated_at: str,
+    ) -> str:
+        lines = [
+            "# Timeline Export",
+            "",
+            f"Generated at: {generated_at}",
+            "",
+        ]
+        for event in events:
+            lines.append(f"## {event.title}")
+            lines.append(f"- Date: {event.ts.isoformat()}")
+            lines.append(f"- Summary: {event.summary}")
+            if event.citations:
+                lines.append(f"- Citations: {', '.join(event.citations)}")
+            if event.risk_band:
+                lines.append(f"- Risk: {event.risk_band}")
+            if event.recommended_actions:
+                lines.append("- Recommended Actions:")
+                for action in event.recommended_actions:
+                    lines.append(f"  - {action}")
+            lines.append("")
+        if scenes:
+            lines.append("# Storyboard")
+            lines.append("")
+            for scene in scenes:
+                lines.append(f"## {scene['title']}")
+                lines.append(scene.get("narrative", ""))
+                if scene.get("visual_prompt"):
+                    lines.append(f"- Visual Prompt: {scene['visual_prompt']}")
+                citations = scene.get("citations") or []
+                if citations:
+                    lines.append(f"- Citations: {', '.join(citations)}")
+                lines.append("")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _render_html(
+        events: List[TimelineEvent],
+        *,
+        scenes: List[Dict[str, str]],
+        generated_at: str,
+    ) -> str:
+        rows = []
+        for event in events:
+            rows.append(
+                f"<tr><td>{event.ts.isoformat()}</td><td>{event.title}</td><td>{event.summary}</td><td>{', '.join(event.citations)}</td></tr>"
+            )
+        storyboard_section = ""
+        if scenes:
+            storyboard_items = "".join(
+                f"<div class='scene'><h3>{scene['title']}</h3><p>{scene.get('narrative','')}</p><p><em>{scene.get('visual_prompt','')}</em></p></div>"
+                for scene in scenes
+            )
+            storyboard_section = f"<section><h2>Storyboard</h2>{storyboard_items}</section>"
+        return (
+            "<!doctype html>"
+            "<html><head><meta charset='utf-8'/>"
+            "<title>Timeline Export</title>"
+            "<style>body{font-family:Arial,sans-serif;}table{width:100%;border-collapse:collapse;}td,th{border:1px solid #ccc;padding:8px;}h1,h2{margin-top:24px;}</style>"
+            "</head><body>"
+            f"<h1>Timeline Export</h1><p>Generated at {generated_at}</p>"
+            "<table><thead><tr><th>Date</th><th>Title</th><th>Summary</th><th>Citations</th></tr></thead><tbody>"
+            + "".join(rows)
+            + "</tbody></table>"
+            + storyboard_section
+            + "</body></html>"
+        )
+
+    @staticmethod
+    def _render_xlsx(
+        events: List[TimelineEvent],
+        *,
+        scenes: List[Dict[str, str]],
+    ) -> bytes:
+        try:
+            import pandas as pd
+        except ImportError as exc:
+            raise ValueError("pandas is required for XLSX export") from exc
+        data = [
+            {
+                "date": event.ts.isoformat(),
+                "title": event.title,
+                "summary": event.summary,
+                "citations": ", ".join(event.citations),
+                "risk": event.risk_band,
+                "confidence": event.confidence,
+            }
+            for event in events
+        ]
+        output = BytesIO()
+        try:
+            with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                pd.DataFrame(data).to_excel(writer, index=False, sheet_name="Timeline")
+                if scenes:
+                    pd.DataFrame(scenes).to_excel(writer, index=False, sheet_name="Storyboard")
+        except ImportError as exc:
+            raise ValueError("openpyxl is required for XLSX export") from exc
+        return output.getvalue()
+
+    @staticmethod
+    def _render_pdf(
+        events: List[TimelineEvent],
+        *,
+        scenes: List[Dict[str, str]],
+        generated_at: str,
+    ) -> bytes:
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.pdfgen import canvas
+        except ImportError as exc:
+            raise ValueError("reportlab is required for PDF export") from exc
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=letter)
+        _, height = letter
+        y = height - 40
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawString(40, y, "Timeline Export")
+        y -= 20
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(40, y, f"Generated at {generated_at}")
+        y -= 20
+
+        def write_line(text: str) -> None:
+            nonlocal y
+            if y < 60:
+                pdf.showPage()
+                y = height - 40
+                pdf.setFont("Helvetica", 10)
+            pdf.drawString(40, y, text[:120])
+            y -= 14
+
+        for event in events:
+            write_line(f"{event.ts.isoformat()} — {event.title}")
+            write_line(event.summary)
+            if event.citations:
+                write_line(f"Citations: {', '.join(event.citations)}")
+            y -= 6
+
+        if scenes:
+            write_line("Storyboard")
+            for scene in scenes:
+                write_line(scene.get("title", ""))
+                write_line(scene.get("narrative", ""))
+                prompt = scene.get("visual_prompt")
+                if prompt:
+                    write_line(f"Visual: {prompt}")
+                y -= 6
+
+        pdf.save()
+        buffer.seek(0)
+        return buffer.read()
 
     @staticmethod
     def _bounded_limit(limit: int) -> int:

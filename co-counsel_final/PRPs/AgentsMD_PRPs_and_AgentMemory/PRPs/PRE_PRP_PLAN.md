@@ -1,8 +1,8 @@
 # Pre‑PRP Plan — Co‑Counsel Commercial Build
 
-> **PRP Navigation:** [Base](PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_base.md) · [Planning](PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_planning.md) · [Spec](PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_spec.md) · [Tasks](PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_tasks.md) · [Pre-PRP Plan](PRE_PRP_PLAN.md) · [ACE Execution Guide](EXECUTION_GUIDE_ACE.md) · [Task List Master](TASK_LIST_MASTER.md) · [PRP Templates](templates/README.md) · [Rapid Dev Commands](../.codex/commands/README.md)
+> **PRP Navigation:** [Base](PRP_CoCounsel_Swarms_LlamaIndex_Swarms_base.md) · [Planning](PRP_CoCounsel_Swarms_LlamaIndex_Swarms_planning.md) · [Spec](PRP_CoCounsel_Swarms_LlamaIndex_Swarms_spec.md) · [Tasks](PRP_CoCounsel_Swarms_LlamaIndex_Swarms_tasks.md) · [Pre-PRP Plan](PRE_PRP_PLAN.md) · [ACE Execution Guide](EXECUTION_GUIDE_ACE.md) · [Task List Master](TASK_LIST_MASTER.md) · [PRP Templates](templates/README.md) · [Rapid Dev Commands](../.codex/commands/README.md)
 
-Purpose: Establish shared context and an execution playbook before coding. Aligns prior blueprints (previous builds/docs) with the target stack: Microsoft Agents Framework SDK, LlamaIndex + LlamaHub, Swarms, Neo4j, Qdrant/Chroma, React UI, Whisper/Coqui.
+Purpose: Establish shared context and an execution playbook before coding. Aligns prior blueprints (previous builds/docs) with the target stack: Swarms, LlamaIndex + LlamaHub, Swarms, Neo4j, Qdrant/Chroma, React UI, Whisper/Coqui.
 
 ## Vision & Bar
 - One‑pass attempt at commercial, production‑ready quality (worth $1000/mo).
@@ -11,7 +11,7 @@ Purpose: Establish shared context and an execution playbook before coding. Align
 
 ## Folder Canon (repo alignment)
 - apps/ — thin CLI/UX wrappers
-- backend/ — API, agents, workers (MS Agents workflow graph)
+- backend/ — API, agents, workers (swarms workflow graph)
 - services/ — long‑running jobs, ingestion workers
 - agents/ — agent registry + ACE loop
 - tools/ — callable tools
@@ -52,7 +52,7 @@ Purpose: Establish shared context and an execution playbook before coding. Align
 
 ## Dependencies (initial)
 - Python 3.11+, Neo4j 5.x, Qdrant/Chroma, Node 18+
-- Microsoft Agents Framework SDK (Python), LlamaIndex + LlamaHub, Swarms, Whisper/Coqui
+- Swarms (Python), LlamaIndex + LlamaHub, Swarms, Whisper/Coqui
 
 ## Validation Gates (global)
 - Unit: loaders, embeddings, graph upserts, retriever composition

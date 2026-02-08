@@ -1,15 +1,41 @@
 # Agentic Systems Architecture
 
-This document outlines the architecture of the Co-Counsel application's agentic systems, detailing the various agent teams, their roles, and how they interact within the Microsoft Agents Framework SDK.
+This document outlines the architecture of the Co-Counsel application's agentic systems, describing the Swarms-based runtime, the workflow registry, and the archived legacy team reference. See `docs/architecture/swarms_vision_architecture.md` for the current vision and target architecture.
 
 ## Core Principles
 
-*   **Modularity:** Each agent team is designed as a modular unit with a specific focus.
-*   **Redundancy:** Key agents within each team have primary and backup counterparts to ensure fault tolerance.
-*   **Three-Step QA:** Every team's output undergoes a rigorous three-step Quality Assurance process (Validation, Critique, Refinement) to ensure accuracy, quality, and compliance.
-*   **Supervisor-led Workflow:** Each team is led by a Supervisor agent responsible for task delegation, workflow orchestration, and managing redundancy.
-*   **Tool-driven:** Agents leverage a rich set of specialized tools to perform their tasks, ensuring non-mocked, production-ready functionality.
-*   **Asynchronous Oversight:** A dedicated AI QA Oversight Committee operates asynchronously to monitor and improve the overall agentic system's performance and safety.
+*   **Modularity:** Swarms profiles map to reusable phase handlers and core roles.
+*   **Routing-first:** A Swarms router selects the correct team profile for a given phase or query.
+*   **Workflow orchestration:** CaseWorkflowService coordinates the pipeline and emits JSON + Markdown artifacts per phase.
+*   **Tool-driven:** Phases call concrete services (retrieval, graph, forensics) rather than mocked outputs.
+*   **Governance:** QA review is explicit in the `qa_review` phase with audit metadata.
+
+
+## Workflow Orchestration
+
+The current runtime uses a Swarms hybrid workflow. A phase registry defines each pipeline step, maps it to a Swarms profile, and ensures each phase outputs JSON + Markdown artifacts with knowledge-graph upserts.
+
+### Court Integrations Layer
+
+Court integrations are implemented as provider connectors (PACER, UniCourt, LACS) behind a shared interface and orchestrated by `CourtIntegrationService`. Each retrieval creates evidence packets with provider/docket/document metadata, then feeds ingestion → indexing → graph upserts → timeline extraction. Paid document retrievals are tracked via an append-only, hash-chained payment ledger to preserve auditability and explicit user authorization. The automation pipeline adds a `court_sync` phase after indexing to keep case law (CourtListener/Case.law) and docket signals refreshed automatically.
+
+
+
+### Graph Refinement Worker
+
+The graph refinement worker runs in the background to re-apply heuristics, detect new clusters, and add lightweight co-occurrence edges. It enforces a diminishing-returns cutoff: if the last N runs yield fewer than the configured minimum new edges, the worker automatically pauses.
+
+### Graph Refinement Controls
+
+- POST `/graph/refinement/restart`: restarts the refinement worker using current settings.
+
+
+
+A background refinement worker periodically analyzes the knowledge graph, detects new clusters, and adds lightweight CO_OCCURS relationships. It stops after a configurable number of idle runs with no new edges.
+
+## Legacy Reference (Archived)
+
+The following team descriptions are preserved for historical reference and are archived under `archive-co counsel/`. They do not describe the current runtime.
 
 ## Agent Teams Overview
 
@@ -33,7 +59,7 @@ The Co-Counsel application features several specialized agent teams, each design
 
 ### 2. ForensicAnalysisCrew
 
-**Role:** Performs deep forensic analysis on digital evidence (PDFs, images, financial data, cryptocurrency transactions) to detect tampering and extract insights.
+**Role:** Performs deep forensic analysis on digital evidence (PDFs, images, financial data, cryptocurrency transactions) to detect tampering and extract insights, including cross-chain tracing and ETH token clustering with provenance.
 
 **Key Agents:**
 *   **ForensicAnalysisSupervisor:** Oversees forensic tasks.
@@ -41,7 +67,7 @@ The Co-Counsel application features several specialized agent teams, each design
 *   **EvidenceIntegrityAgent (Primary/Backup):** Ensures integrity of digital evidence.
 *   **ForensicMediaAnalyst (Primary/Backup):** Analyzes various media files.
 *   **ForensicAccountant (Primary/Backup):** Performs financial analysis.
-*   **ForensicCryptocurrencyAssetTracker (Primary/Backup):** Tracks crypto transactions and attributes wallets.
+*   **ForensicCryptocurrencyAssetTracker (Primary/Backup):** Tracks crypto transactions, performs ETH token clustering, and proposes cross-chain bridge matches with provenance.
 *   **ForensicDataAnalyst (Primary/Backup):** General data analysis.
 *   **ForensicDocumentsQACoordinator (Lead QA):** Leads QA for document forensics.
 *   **ForensicFinanceQAReviewer (Lead QA):** Leads QA for financial forensics.
@@ -122,7 +148,7 @@ The agent teams leverage a comprehensive suite of specialized tools, many of whi
 
 ## Orchestration and Routing
 
-The `MicrosoftAgentsOrchestrator` dynamically routes incoming user questions to the most appropriate agent team based on keyword analysis and intent. This allows for a flexible and scalable system where specialized teams can be invoked as needed.
+The Swarms router dynamically routes incoming user questions to the most appropriate team profile based on phase and intent. This allows for a flexible and scalable system where specialized teams can be invoked as needed.
 
 ## Future Enhancements
 

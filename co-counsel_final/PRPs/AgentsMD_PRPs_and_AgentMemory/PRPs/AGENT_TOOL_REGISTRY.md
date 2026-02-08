@@ -1,6 +1,6 @@
 # Agent & Tool Registry (Enhanced — 2025-10-29)
 
-Purpose: Central map of agents, tools, state transitions, and observability contracts governing the MS Agents + Swarms workflow.
+Purpose: Central map of agents, tools, state transitions, and observability contracts governing the swarms + Swarms workflow.
 
 ## Canonical State Glossary
 - `idle` → agent awaiting work.

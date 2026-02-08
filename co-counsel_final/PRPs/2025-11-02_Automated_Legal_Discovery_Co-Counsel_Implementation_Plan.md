@@ -26,7 +26,7 @@ This plan outlines the implementation roadmap for the "Automated Legal Discovery
 - **Observability:** Implementing comprehensive logging, tracing, and monitoring from day one to ensure system health and performance.
 
 ### Reference Implementations
-- **Microsoft Agents Framework SDK:** The PRD explicitly mentions this for orchestration, workflow graphs, memory, and telemetry. This will be the primary reference for agentic system design.
+- **Swarms:** The PRD explicitly mentions this for orchestration, workflow graphs, memory, and telemetry. This will be the primary reference for agentic system design.
 - **LlamaIndex Core + LlamaHub Connectors:** For RAG and data loading, LlamaIndex documentation and examples will be key.
 - **Neo4j & GraphRAG:** Neo4j documentation and existing GraphRAG implementations will guide knowledge graph construction and querying.
 - **OpenAvatarChat (`https://github.com/HumanAIGC-Engineering/OpenAvatarChat`):** This will serve as a direct reference for implementing life-like avatars.
@@ -36,7 +36,7 @@ This plan outlines the implementation roadmap for the "Automated Legal Discovery
 - **Backend Framework:** FastAPI (Python) for its performance, async capabilities, and ease of building APIs for AI services.
 - **Frontend Framework:** React (Next.js/Vite) with TypeScript, utilizing TailwindCSS, shadcn/ui, and Framer Motion for a cinematic, premium-grade dark-mode interface.
 - **Database:** PostgreSQL for relational data, Neo4j for the knowledge graph, and Qdrant/Chroma for vector storage.
-- **Orchestration:** Microsoft Agents Framework SDK.
+- **Orchestration:** Swarms.
 - **AI/RAG:** LlamaIndex core + LlamaHub connectors.
 - **Voice:** Whisper STT and Coqui TTS (as per original PRD, though voice aspect was removed from risks/dependencies, the tech stack remains relevant for voice features).
 - **Deployment:** Docker Compose for local development and containerization.
@@ -265,7 +265,7 @@ This plan outlines the implementation roadmap for the "Automated Legal Discovery
 - **React Component Structure:** Follow existing patterns for component organization, state management (e.g., hooks, context API), and data fetching.
 - **TailwindCSS & shadcn/ui Theming:** Adhere to the established design system for consistent UI.
 - **OpenTelemetry Integration:** Follow existing patterns for instrumentation and tracing.
-- **Agent Framework Patterns:** Utilize the Microsoft Agents Framework SDK's patterns for agent orchestration and workflow design.
+- **Agent Framework Patterns:** Utilize the Swarms's patterns for agent orchestration and workflow design.
 
 ## Technical Design
 
@@ -277,8 +277,8 @@ graph TD
     Backend -->|Data Access| PostgreSQL(Relational DB)
     Backend -->|Graph Data| Neo4j(Knowledge Graph)
     Backend -->|Embeddings| VectorDB(Qdrant/Chroma)
-    Backend -->|Orchestration| MSAgents(Microsoft Agents Framework)
-    MSAgents -->|Tools/RAG| LlamaIndex(LlamaHub Connectors)
+    Backend -->|Orchestration| Swarms(Swarms)
+    Swarms -->|Tools/RAG| LlamaIndex(LlamaHub Connectors)
     LlamaIndex -->|External Data| CourtListener(External Legal Resources)
     LlamaIndex -->|External Data| LocalDockets(Local Court Dockets)
     Backend -->|Avatars| OpenAvatarChat(Life-like Avatars)
@@ -292,8 +292,8 @@ graph TD
 ### Data Flow
 1.  **User Interaction:** User interacts with the React frontend (e.g., uploads documents, queries the system).
 2.  **Frontend to Backend:** Frontend sends requests to FastAPI backend via HTTP/WebSockets.
-3.  **Backend Processing:** FastAPI services handle requests, orchestrate AI agents (MS Agents Framework), interact with databases (PostgreSQL, Neo4j, VectorDB), and external services (LlamaHub, Court Dockets).
-4.  **AI Agent Workflow:** MS Agents Framework manages the flow between specialized agents (e.g., IngestionAgent, GraphBuilderAgent, ResearchAgent) which utilize LlamaIndex for RAG and tool execution.
+3.  **Backend Processing:** FastAPI services handle requests, orchestrate AI agents (swarms Framework), interact with databases (PostgreSQL, Neo4j, VectorDB), and external services (LlamaHub, Court Dockets).
+4.  **AI Agent Workflow:** swarms Framework manages the flow between specialized agents (e.g., IngestionAgent, GraphBuilderAgent, ResearchAgent) which utilize LlamaIndex for RAG and tool execution.
 5.  **Data Storage:** Processed data, embeddings, and knowledge graph entities are stored in respective databases.
 6.  **Response Generation:** AI agents generate responses, including citations, which are returned to the backend.
 7.  **Backend to Frontend:** Backend sends processed data and responses back to the frontend.
@@ -320,7 +320,7 @@ graph TD
 -   `WS /api/chat` - WebSocket for real-time chat and voice.
 
 ## Dependencies and Libraries
--   **Backend:** FastAPI, Pydantic, SQLAlchemy (or similar ORM), LlamaIndex, LlamaHub, Neo4j Driver, Qdrant/Chroma Client, Microsoft Agents Framework SDK, OpenTelemetry SDK, Uvicorn.
+-   **Backend:** FastAPI, Pydantic, SQLAlchemy (or similar ORM), LlamaIndex, LlamaHub, Neo4j Driver, Qdrant/Chroma Client, Swarms, OpenTelemetry SDK, Uvicorn.
 -   **Frontend:** React, TypeScript, Next.js/Vite, TailwindCSS, shadcn/ui, Framer Motion, React Three Fiber, OpenAvatarChat, WebRTC libraries.
 -   **Databases:** PostgreSQL, Neo4j, Qdrant/Chroma.
 -   **Deployment:** Docker, Docker Compose.

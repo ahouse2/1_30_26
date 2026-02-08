@@ -67,7 +67,7 @@ This plan addresses the key findings from the code review conducted on 2025-11-0
     -   **Estimated effort:** 3 hours.
 
 6.  **Task: Enhance Backend Test Coverage**
-    -   **Description:** Add integration tests for the `MicrosoftAgentsOrchestrator` to validate different agent sequences and error conditions.
+    -   **Description:** Add integration tests for the `SwarmsOrchestrator` to validate different agent sequences and error conditions.
     -   **Files to modify/create:** New test files in `backend/tests/`.
     -   **Dependencies:** Task 1.
     -   **Estimated effort:** 5 hours.

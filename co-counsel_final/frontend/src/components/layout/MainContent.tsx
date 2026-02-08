@@ -1,4 +1,5 @@
 
+import CourtDataPanel from '@/components/CourtDataPanel';
 import { DevTeamSection } from '@/components/dev-team';
 import { CinematicMetrics } from '@/components/CinematicMetrics';
 import { EvidenceUploadZone } from '@/components/evidence/EvidenceUploadZone';
@@ -67,6 +68,14 @@ export function MainContent({ activeSection, panelId, tabsId }: MainContentProps
             <p className="text-text-secondary">Citation panel would be implemented here...</p>
           </div>
         </div>
+      </section>
+      <section
+        id={`${panelId}-court-data`}
+        role="tabpanel"
+        aria-labelledby={`${tabsId}-court-data`}
+        hidden={activeSection !== 'court-data'}
+      >
+        <CourtDataPanel />
       </section>
       <section
         id={`${panelId}-trial-university`}

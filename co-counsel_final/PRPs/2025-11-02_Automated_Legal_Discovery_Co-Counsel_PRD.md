@@ -1,7 +1,7 @@
 # Product Requirements Document: Automated Legal Discovery Co-Counsel
 
 ## Strategic Overview:
-*   **Project Mandate:** Rebuild the "Automated Legal Discovery Co-Counsel" system using Microsoft Agents Framework SDK for orchestration, LlamaIndex core + LlamaHub connectors for knowledge/RAG, Swarms for domain roles, Qdrant or Chroma for vector store, React for frontend, and Whisper STT/Coqui TTS for voice.
+*   **Project Mandate:** Rebuild the "Automated Legal Discovery Co-Counsel" system using Swarms for orchestration, LlamaIndex core + LlamaHub connectors for knowledge/RAG, Swarms for domain roles, Qdrant or Chroma for vector store, React for frontend, and Whisper STT/Coqui TTS for voice.
 *   **Core Principles:**
     *   End-to-end discovery ingestion (PDFs, emails, chats, drives) with continuous updates.
     *   Contextual legal reasoning with citations (hybrid vector + graph retrieval).
@@ -241,7 +241,7 @@ This "Automated Legal Discovery Co-Counsel" aims to address these problems by pr
 
 **Dependencies:**
 
-*   **Microsoft Agents Framework SDK:** Core for orchestration, workflow graphs, memory, and telemetry.
+*   **Swarms:** Core for orchestration, workflow graphs, memory, and telemetry.
 *   **LlamaIndex Core + LlamaHub Connectors:** Essential for knowledge management, RAG, and data loading from various sources.
 *   **Neo4j:** Critical for GraphRAG capabilities and knowledge graph storage.
 *   **Qdrant or Chroma:** Required for vector store functionality.

@@ -1,7 +1,7 @@
 ### PRP Analyze Run — Structured Notes
 
 **Run Metadata**
-- PRP document(s): docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_spec.md
+- PRP document(s): docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_Swarms_LlamaIndex_Swarms_spec.md
 - Command / script: Manual code inspection via `sed`, `nl`, `find`
 - Date & time (UTC): 2025-10-31T00:00:00Z
 - Operator(s): ChatGPT (gpt-5-codex)
@@ -42,9 +42,9 @@
 **4. Issues & Risks**
 - Severity-ranked findings:
   1. **Blocker** — Storage module references unresolved, preventing ingestion/timeline persistence.【F:backend/app/services/ingestion.py†L14-L90】【428696†L1-L5】
-  2. **Blocker** — Security controls mandated by PRP (mTLS, OAuth, Oso policies) absent across stack.【F:backend/app/main.py†L24-L127】【F:docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_spec.md†L6-L86】
+  2. **Blocker** — Security controls mandated by PRP (mTLS, OAuth, Oso policies) absent across stack.【F:backend/app/main.py†L24-L127】【F:docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_Swarms_LlamaIndex_Swarms_spec.md†L6-L86】
   3. **Critical** — Utility helpers missing imports leading to runtime exceptions (`NameError: name 're' is not defined`).【F:backend/app/utils/text.py†L1-L41】
-  4. **Major** — Retrieval/forensics pipelines simplified vs PRP requirements (no hybrid rerank, no ACE tracing).【F:backend/app/services/retrieval.py†L1-L91】【F:docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_MSAgents_LlamaIndex_Swarms_spec.md†L26-L120】
+  4. **Major** — Retrieval/forensics pipelines simplified vs PRP requirements (no hybrid rerank, no ACE tracing).【F:backend/app/services/retrieval.py†L1-L91】【F:docs/AgentsMD_PRPs_and_AgentMemory/PRPs/PRP_CoCounsel_Swarms_LlamaIndex_Swarms_spec.md†L26-L120】
 - Root-cause hypotheses:
   - Implementation diverged from spec, focusing on local prototype without scaffolding storage/security layers.
 - Mitigations applied during run:

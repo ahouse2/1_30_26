@@ -1,7 +1,7 @@
 
 ### Migration and Implementation Plan: Co-Counsel Agentic Framework
 
-This plan outlines the necessary steps to adapt and integrate the agent teams and tools from the `toolsnteams_previous` directory into the production `MicrosoftAgentsOrchestrator` framework.
+This plan outlines the necessary steps to adapt and integrate the agent teams and tools from the `toolsnteams_previous` directory into the production `SwarmsOrchestrator` framework.
 
 #### **Phase 1: Foundational Tool Development & Enhancement**
 
@@ -127,7 +127,7 @@ This phase focuses on the teams that support the core legal work and the overall
 #### **Phase 4: Integration and Finalization**
 
 1.  **Task: Finalize Orchestrator Integration**
-    *   **Description:** Update the main `MicrosoftAgentsOrchestrator` to include all new teams and provide a mechanism for selecting the correct team for a given task.
+    *   **Description:** Update the main `SwarmsOrchestrator` to include all new teams and provide a mechanism for selecting the correct team for a given task.
     *   **Files to Create/Modify:**
         *   `backend/app/agents/runner.py` (Modify)
     *   **Steps:**

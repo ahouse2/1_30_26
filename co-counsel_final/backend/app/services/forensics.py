@@ -330,6 +330,15 @@ class ForensicsService:
             return False
         return artifact in report.get("artifacts", {})
 
+    def get_document_forensics(self, document_id: str, principal: Principal | None = None) -> Dict[str, Any]:
+        return self.load_artifact(document_id, "document", principal=principal)
+
+    def get_image_forensics(self, image_id: str, principal: Principal | None = None) -> Dict[str, Any]:
+        return self.load_artifact(image_id, "image", principal=principal)
+
+    def get_financial_forensics(self, transaction_id: str, principal: Principal | None = None) -> Dict[str, Any]:
+        return self.load_artifact(transaction_id, "financial", principal=principal)
+
     # endregion
 
     # region pipeline execution

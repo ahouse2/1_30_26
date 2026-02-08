@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List
 from uuid import uuid4
 
-from agents.toolkit.sandbox import SandboxExecutionHarness, SandboxExecutionResult
+from backend.app.agents.agents.toolkit.sandbox import SandboxExecutionHarness, SandboxExecutionResult
 
 from ..storage.agent_memory_store import (
     AgentMemoryStore,
@@ -52,7 +52,7 @@ class ProposalContext:
 
 
 class DevTeamPlanner:
-    """Planner persona mirroring Microsoft Agents SDK planning semantics."""
+    """Planner persona mirroring Swarms planning semantics."""
 
     def __init__(self, memory_store: AgentMemoryStore) -> None:
         self.memory_store = memory_store
@@ -169,4 +169,3 @@ class DevTeamAgent:
 
     def validate_proposal(self, proposal: PatchProposalRecord) -> SandboxExecutionResult:
         return self.executor.validate(proposal)
-

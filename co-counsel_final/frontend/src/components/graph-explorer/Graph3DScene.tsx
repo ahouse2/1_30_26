@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
-import { OrbitControls, Sphere, Line, Text, Html } from "@react-three/drei"
+import { OrbitControls, Sphere, Line, Text } from "@react-three/drei"
 import * as THREE from "three"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
@@ -14,6 +14,10 @@ interface GraphNode {
   z: number
   cluster: string
   connections: string[]
+  size?: number
+  color?: string
+  dimmed?: boolean
+  active?: boolean
 }
 
 interface Graph3DSceneProps {
@@ -52,13 +56,15 @@ const Node: React.FC<{
     }
   }
 
-  const color = getColor(node.cluster)
+  const color = node.color ?? getColor(node.cluster)
+  const baseSize = node.size ?? 0.2
+  const dimmed = Boolean(node.dimmed) && !hovered && !node.active
 
   return (
     <group position={[node.x, node.y, node.z]}>
       <Sphere
         ref={meshRef}
-        args={[0.2, 32, 32]}
+        args={[baseSize, 32, 32]}
         onClick={() => onClick(node)}
         onPointerOver={() => {
           document.body.style.cursor = 'pointer'
@@ -72,19 +78,21 @@ const Node: React.FC<{
         <meshStandardMaterial 
           color={color}
           emissive={color}
-          emissiveIntensity={hovered ? 0.5 : 0.2}
+          emissiveIntensity={node.active ? 0.7 : hovered ? 0.5 : 0.2}
           roughness={0.5}
           metalness={0.8}
+          transparent
+          opacity={dimmed ? 0.35 : 0.95}
         />
       </Sphere>
       <Text
-        position={[0, 0.5, 0]}
+        position={[0, baseSize + 0.25, 0]}
         fontSize={0.15}
         maxWidth={2}
         lineHeight={1}
         letterSpacing={0.02}
         textAlign="center"
-        color="#ececf0"
+        color={dimmed ? "#6f7584" : "#ececf0"}
         anchorX="center"
         anchorY="middle"
         outlineWidth={0.01}
@@ -94,8 +102,8 @@ const Node: React.FC<{
       </Text>
       
       {/* Glow effect when hovered */}
-      {hovered && (
-        <Sphere args={[0.25, 32, 32]}>
+      {(hovered || node.active) && (
+        <Sphere args={[baseSize + 0.05, 32, 32]}>
           <meshBasicMaterial 
             color={color}
             transparent={true}

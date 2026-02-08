@@ -24,6 +24,7 @@ export function SettingsPanel(): JSX.Element {
     settings,
     catalog,
     updateSettings,
+    refreshModelCatalog,
     themePreference,
     setThemePreference,
     loading,
@@ -41,8 +42,17 @@ export function SettingsPanel(): JSX.Element {
   const [keysToClear, setKeysToClear] = useState<Record<string, boolean>>({});
   const [apiBaseUrls, setApiBaseUrls] = useState<Record<string, string>>({});
   const [localRuntimePaths, setLocalRuntimePaths] = useState<Record<string, string>>({});
+  const [refreshingProvider, setRefreshingProvider] = useState<string | null>(null);
   const [courtListenerToken, setCourtListenerToken] = useState('');
   const [clearCourtListener, setClearCourtListener] = useState(false);
+  const [pacerToken, setPacerToken] = useState('');
+  const [clearPacerToken, setClearPacerToken] = useState(false);
+  const [unicourtToken, setUnicourtToken] = useState('');
+  const [clearUnicourtToken, setClearUnicourtToken] = useState(false);
+  const [lacsToken, setLacsToken] = useState('');
+  const [clearLacsToken, setClearLacsToken] = useState(false);
+  const [caselawToken, setCaselawToken] = useState('');
+  const [clearCaselawToken, setClearCaselawToken] = useState(false);
   const [researchToken, setResearchToken] = useState('');
   const [clearResearchToken, setClearResearchToken] = useState(false);
 
@@ -62,6 +72,14 @@ export function SettingsPanel(): JSX.Element {
     setLocalRuntimePaths(settings.providers.local_runtime_paths ?? {});
     setCourtListenerToken('');
     setClearCourtListener(false);
+    setPacerToken('');
+    setClearPacerToken(false);
+    setUnicourtToken('');
+    setClearUnicourtToken(false);
+    setLacsToken('');
+    setClearLacsToken(false);
+    setCaselawToken('');
+    setClearCaselawToken(false);
     setResearchToken('');
     setClearResearchToken(false);
   }, [settings]);
@@ -122,6 +140,11 @@ export function SettingsPanel(): JSX.Element {
     if (!primaryProvider) {
       return;
     }
+    const baseUrlOverrides: Record<string, string | null> = {};
+    Object.entries(apiBaseUrls).forEach(([providerId, baseUrl]) => {
+      const trimmed = baseUrl.trim();
+      baseUrlOverrides[providerId] = trimmed.length > 0 ? trimmed : null;
+    });
     await updateSettings({
       providers: {
         primary: primaryProvider,
@@ -131,10 +154,19 @@ export function SettingsPanel(): JSX.Element {
           embeddings: embeddingModel || null,
           vision: visionModel || null,
         },
-        api_base_urls: apiBaseUrls,
+        api_base_urls: baseUrlOverrides,
         local_runtime_paths: localRuntimePaths,
       },
     });
+  };
+
+  const handleRefreshModels = async (providerId: string) => {
+    setRefreshingProvider(providerId);
+    try {
+      await refreshModelCatalog(providerId);
+    } finally {
+      setRefreshingProvider(null);
+    }
   };
 
   const handleCredentialsSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -170,6 +202,22 @@ export function SettingsPanel(): JSX.Element {
       credentials.courtlistener_token = clearCourtListener ? null : courtListenerToken.trim();
       hasUpdate = true;
     }
+    if (clearPacerToken || pacerToken.trim().length > 0) {
+      credentials.pacer_api_key = clearPacerToken ? null : pacerToken.trim();
+      hasUpdate = true;
+    }
+    if (clearUnicourtToken || unicourtToken.trim().length > 0) {
+      credentials.unicourt_api_key = clearUnicourtToken ? null : unicourtToken.trim();
+      hasUpdate = true;
+    }
+    if (clearLacsToken || lacsToken.trim().length > 0) {
+      credentials.lacs_api_key = clearLacsToken ? null : lacsToken.trim();
+      hasUpdate = true;
+    }
+    if (clearCaselawToken || caselawToken.trim().length > 0) {
+      credentials.caselaw_api_key = clearCaselawToken ? null : caselawToken.trim();
+      hasUpdate = true;
+    }
     if (clearResearchToken || researchToken.trim().length > 0) {
       credentials.research_browser_api_key = clearResearchToken ? null : researchToken.trim();
       hasUpdate = true;
@@ -181,8 +229,16 @@ export function SettingsPanel(): JSX.Element {
       credentials: credentials,
     });
     setCourtListenerToken('');
+    setPacerToken('');
+    setUnicourtToken('');
+    setLacsToken('');
+    setCaselawToken('');
     setResearchToken('');
     setClearCourtListener(false);
+    setClearPacerToken(false);
+    setClearUnicourtToken(false);
+    setClearLacsToken(false);
+    setClearCaselawToken(false);
     setClearResearchToken(false);
   };
 
@@ -253,20 +309,27 @@ export function SettingsPanel(): JSX.Element {
             Configure API base URLs for cloud and local runtimes (OpenRouter, LocalAI, LM Studio, Ollama).
           </p>
           {providerCatalog.map((entry) => (
-            <label key={entry.id}>
-              {entry.display_name} base URL
-              <input
-                type="text"
-                value={apiBaseUrls[entry.id] ?? ''}
-                placeholder="https://..."
-                onChange={(event) =>
-                  setApiBaseUrls((current) => ({
-                    ...current,
-                    [entry.id]: event.target.value,
-                  }))
-                }
-              />
-            </label>
+            <div key={entry.id} className="provider-endpoint">
+              <label>
+                {entry.display_name} base URL
+                <input
+                  type="url"
+                  placeholder="https://"
+                  value={apiBaseUrls[entry.id] ?? ''}
+                  onChange={(event) =>
+                    setApiBaseUrls((current) => ({ ...current, [entry.id]: event.target.value }))
+                  }
+                />
+              </label>
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => handleRefreshModels(entry.id)}
+                disabled={refreshingProvider === entry.id || saving || loading}
+              >
+                {refreshingProvider === entry.id ? 'Refreshing models...' : 'Refresh models'}
+              </button>
+            </div>
           ))}
         </div>
         <div className="settings-subsection">
@@ -292,6 +355,7 @@ export function SettingsPanel(): JSX.Element {
               </label>
             );
           })}
+        </div>
         </div>
         <div className="form-actions">
           <button type="submit" disabled={saving}>
@@ -361,6 +425,78 @@ export function SettingsPanel(): JSX.Element {
             onClick={() => setClearCourtListener((current) => !current)}
           >
             {clearCourtListener ? 'Keep stored token' : 'Remove stored token'}
+          </button>
+        )}
+        <label>
+          PACER API key
+          <input
+            type="password"
+            placeholder={serviceStatus.pacer ? 'Stored' : 'Enter API key'}
+            value={pacerToken}
+            onChange={(event) => setPacerToken(event.target.value)}
+          />
+        </label>
+        {serviceStatus.pacer && (
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => setClearPacerToken((current) => !current)}
+          >
+            {clearPacerToken ? 'Keep stored key' : 'Remove stored key'}
+          </button>
+        )}
+        <label>
+          UniCourt API key
+          <input
+            type="password"
+            placeholder={serviceStatus.unicourt ? 'Stored' : 'Enter API key'}
+            value={unicourtToken}
+            onChange={(event) => setUnicourtToken(event.target.value)}
+          />
+        </label>
+        {serviceStatus.unicourt && (
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => setClearUnicourtToken((current) => !current)}
+          >
+            {clearUnicourtToken ? 'Keep stored key' : 'Remove stored key'}
+          </button>
+        )}
+        <label>
+          LACS credential
+          <input
+            type="password"
+            placeholder={serviceStatus.lacs ? 'Stored' : 'Enter credential'}
+            value={lacsToken}
+            onChange={(event) => setLacsToken(event.target.value)}
+          />
+        </label>
+        {serviceStatus.lacs && (
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => setClearLacsToken((current) => !current)}
+          >
+            {clearLacsToken ? 'Keep stored credential' : 'Remove stored credential'}
+          </button>
+        )}
+        <label>
+          Case.law API key
+          <input
+            type="password"
+            placeholder={serviceStatus.caselaw ? 'Stored' : 'Enter API key'}
+            value={caselawToken}
+            onChange={(event) => setCaselawToken(event.target.value)}
+          />
+        </label>
+        {serviceStatus.caselaw && (
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => setClearCaselawToken((current) => !current)}
+          >
+            {clearCaselawToken ? 'Keep stored key' : 'Remove stored key'}
           </button>
         )}
         <label>

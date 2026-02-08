@@ -7,7 +7,10 @@ import {
   OutcomeProbability,
   RelationTag,
   TimelineEvent,
+  TimelineExportFormat,
+  StoryboardScene,
 } from '@/types';
+import { exportTimeline, fetchStoryboard } from '@/utils/apiClient';
 
 export function TimelineView(): JSX.Element {
   const {
@@ -26,6 +29,11 @@ export function TimelineView(): JSX.Element {
   } = useQueryContext();
   const [activeIndex, setActiveIndex] = useState(0);
   const [expandedEvent, setExpandedEvent] = useState<TimelineEvent | null>(null);
+  const [storyboardMode, setStoryboardMode] = useState(false);
+  const [storyboard, setStoryboard] = useState<StoryboardScene[]>([]);
+  const [storyboardLoading, setStoryboardLoading] = useState(false);
+  const [storyboardError, setStoryboardError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<TimelineExportFormat | null>(null);
   const grouped = useMemo(() => groupByDay(timelineEvents), [timelineEvents]);
 
   useEffect((): (() => void) => {
@@ -70,6 +78,50 @@ export function TimelineView(): JSX.Element {
     };
   }, [timelineEvents]);
 
+  useEffect(() => {
+    if (!storyboardMode) return;
+    let active = true;
+    setStoryboardLoading(true);
+    setStoryboardError(null);
+    fetchStoryboard({ entity: timelineEntityFilter, risk_band: timelineRiskBand, limit: 50 })
+      .then((response) => {
+        if (!active) return;
+        setStoryboard(response.scenes);
+      })
+      .catch((err: Error) => {
+        if (!active) return;
+        setStoryboardError(err.message);
+      })
+      .finally(() => {
+        if (!active) return;
+        setStoryboardLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [storyboardMode, timelineEntityFilter, timelineRiskBand]);
+
+  const handleExport = async (format: TimelineExportFormat): Promise<void> => {
+    try {
+      setExporting(format);
+      const response = await exportTimeline({
+        format,
+        entity: timelineEntityFilter,
+        risk_band: timelineRiskBand,
+        motion_due_before: timelineDeadline ?? null,
+        storyboard: storyboardMode,
+      });
+      const url = response.download_url.startsWith('http')
+        ? response.download_url
+        : `${window.location.origin}${response.download_url}`;
+      window.open(url, '_blank');
+    } catch (err: any) {
+      setStoryboardError(err.message ?? 'Export failed');
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const handleCitationLink = (docId: string): void => {
     const match = citations.find((citation) => citation.docId === docId);
     if (match) {
@@ -88,6 +140,23 @@ export function TimelineView(): JSX.Element {
       <header>
         <h2>Timeline</h2>
         <p className="panel-subtitle">Graph-enriched events aligned with evidence citations.</p>
+        <div className="timeline-actions">
+          <button type="button" onClick={() => setStoryboardMode((value) => !value)}>
+            {storyboardMode ? 'Hide Storyboard' : 'Story Mode'}
+          </button>
+          <button type="button" onClick={() => void handleExport('md')} disabled={!!exporting}>
+            Export MD
+          </button>
+          <button type="button" onClick={() => void handleExport('html')} disabled={!!exporting}>
+            Export HTML
+          </button>
+          <button type="button" onClick={() => void handleExport('pdf')} disabled={!!exporting}>
+            Export PDF
+          </button>
+          <button type="button" onClick={() => void handleExport('xlsx')} disabled={!!exporting}>
+            Export XLSX
+          </button>
+        </div>
         <label htmlFor="timeline-entity" className="sr-only">
           Filter by entity
         </label>
@@ -159,6 +228,30 @@ export function TimelineView(): JSX.Element {
           </li>
         ))}
       </ol>
+      {storyboardMode && (
+        <section className="timeline-storyboard" aria-live="polite">
+          <h3>Storyboard</h3>
+          {storyboardLoading && <p>Generating storyboard…</p>}
+          {storyboardError && <p className="error-text">{storyboardError}</p>}
+          {!storyboardLoading && !storyboardError && storyboard.length === 0 && (
+            <p>No storyboard scenes available.</p>
+          )}
+          <ul>
+            {storyboard.map((scene) => (
+              <li key={scene.id} className="storyboard-scene">
+                <h4>{scene.title}</h4>
+                <p>{scene.narrative}</p>
+                {scene.visual_prompt && (
+                  <p className="storyboard-visual">Visual idea: {scene.visual_prompt}</p>
+                )}
+                {scene.citations.length > 0 && (
+                  <p className="storyboard-citations">Citations: {scene.citations.join(', ')}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="timeline-actions">
         <button type="button" onClick={() => void loadMoreTimeline()} disabled={!timelineMeta?.has_more || timelineLoading}>
           {timelineLoading ? 'Loading…' : timelineMeta?.has_more ? 'Load more events' : 'No more events'}
