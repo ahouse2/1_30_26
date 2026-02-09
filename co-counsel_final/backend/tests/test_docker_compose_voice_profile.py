@@ -25,6 +25,8 @@ def test_stt_service_is_voice_profile_only():
     assert "profiles:" in block
     assert "- voice" in block
     assert "- prod" not in block
+    assert "linuxserver/faster-whisper:latest" in block
+    assert "\"9000:10300\"" in block
 
 
 def test_tts_service_is_voice_profile_only():
@@ -32,6 +34,7 @@ def test_tts_service_is_voice_profile_only():
     assert "profiles:" in block
     assert "- voice" in block
     assert "- prod" not in block
+    assert "rhasspy/larynx:latest" in block
 
 
 def test_start_stack_full_supports_voice_flag():

@@ -30,6 +30,9 @@ Enable optional voice services (stt/tts):
 ```
 ./scripts/run-prod.sh --voice
 ```
+Voice profile details:
+- STT runs from `linuxserver/faster-whisper:latest` (host `:9000` -> container `:10300`)
+- TTS runs from `rhasspy/larynx:latest` (default voice `en-us-blizzard_lessac`, female)
 3) Run backend locally (once scaffolded)
 ```
 uv run python -m api

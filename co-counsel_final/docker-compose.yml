@@ -178,7 +178,7 @@ services:
 
   stt:
     <<: *gpu-capable
-    image: ghcr.io/guillaumekln/faster-whisper-server:latest
+    image: linuxserver/faster-whisper:latest
     profiles:
       - voice
     environment:
@@ -189,7 +189,7 @@ services:
       - HUGGINGFACE_HUB_CACHE=/models/huggingface
       - ASR_OUTPUT_LANGUAGE=${STT_OUTPUT_LANGUAGE:-en}
     ports:
-      - "9000:9000"
+      - "9000:10300"
     volumes:
       - ./var/models/huggingface:/models/huggingface
       - ./var/models/whisper:/models/whisper
