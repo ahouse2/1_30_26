@@ -3,12 +3,13 @@ set -euo pipefail
 
 print_usage() {
   cat << 'USAGE'
-Usage: ./scripts/start-stack-full.sh [--mode dev|prod] [--seed] [--no-seed] [--data-dir <path>] [--e2e]
+Usage: ./scripts/start-stack-full.sh [--mode dev|prod] [--seed] [--no-seed] [--data-dir <path>] [--e2e] [--voice]
   --mode           Compose profile to start (dev or prod; default: prod)
   --seed           Seed the Neo4j graph with initial data (default: enabled)
   --no-seed        Do not seed the database
   --data-dir       Path to local data directory to ingest after startup
   --e2e            Run frontend UI end-to-end tests after startup (if possible)
+  --voice          Enable optional voice services (stt/tts)
 USAGE
 }
 
@@ -17,6 +18,7 @@ SEED=true
 NOSEED=false
 RUN_E2E=false
 DATA_DIR="EXTERNAL_DRIVE SSD/POST TRIAL DIVORCE"
+VOICE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -25,6 +27,7 @@ while [[ $# -gt 0 ]]; do
     --no-seed) SEED=false; shift ;;
     --data-dir) DATA_DIR="$2"; shift 2 ;;
     --e2e) RUN_E2E=true; shift ;;
+    --voice) VOICE=true; shift ;;
     --help) print_usage; exit 0 ;;
     *) echo "Unknown option: $1"; print_usage; exit 1 ;;
   esac
@@ -36,8 +39,13 @@ if [ ! -f "${ENV_FILE}" ]; then
   exit 1
 fi
 
-echo "Starting stack via docker compose (profile: ${MODE})..."
-docker compose --env-file "${ENV_FILE}" --profile "${MODE}" up -d --build
+PROFILE_FLAGS=(--profile "${MODE}")
+if [ "$VOICE" = true ]; then
+  PROFILE_FLAGS+=(--profile voice)
+fi
+
+echo "Starting stack via docker compose (profile: ${MODE}${VOICE:+, voice})..."
+docker compose --env-file "${ENV_FILE}" "${PROFILE_FLAGS[@]}" up -d --build
 echo "Waiting for services to become healthy..."
 ./scripts/wait-for-docker-compose.sh 600 --profile "${MODE}"
 

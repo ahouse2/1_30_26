@@ -180,7 +180,7 @@ services:
     <<: *gpu-capable
     image: ghcr.io/guillaumekln/faster-whisper-server:latest
     profiles:
-      - prod
+      - voice
     environment:
       - ASR_MODEL=${STT_MODEL_NAME:-openai/whisper-small}
       - ASR_ENGINE=faster_whisper
@@ -200,7 +200,7 @@ services:
     <<: *gpu-capable
     image: rhasspy/larynx:latest
     profiles:
-      - prod
+      - voice
     environment:
       - LARYNX_VOICE=${TTS_VOICE:-en-us-blizzard_lessac}
       - LARYNX_OUTPUT_DIR=/output

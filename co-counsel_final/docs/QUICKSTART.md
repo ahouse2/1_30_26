@@ -26,6 +26,10 @@ Optional flags:
 ```
 ./scripts/run-prod.sh --no-seed --data-dir "/path/to/case-data" --e2e
 ```
+Enable optional voice services (stt/tts):
+```
+./scripts/run-prod.sh --voice
+```
 3) Run backend locally (once scaffolded)
 ```
 uv run python -m api

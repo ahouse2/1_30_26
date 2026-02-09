@@ -6,4 +6,4 @@ Docker Compose Orchestration for Co-Counsel
 - Use scripts/wait-for-docker-compose.sh to build, start, and wait for readiness.
 - One-click prod launcher: ./scripts/run-prod.sh
 - Wrapper: ./scripts/start-stack-full.sh --mode prod
-- Supports the same flags as start-stack-full.sh (ex: --no-seed, --data-dir, --e2e)
+- Supports the same flags as start-stack-full.sh (ex: --no-seed, --data-dir, --e2e, --voice)
