@@ -21,9 +21,14 @@ from opentelemetry import metrics, trace
 from opentelemetry.trace import Status, StatusCode
 
 from ..config import get_settings
-from ..models.api import IngestionRequest, IngestionSource
+from ..models.api import (
+    IngestionRequest,
+    IngestionResponse,
+    IngestionSource,
+    IngestionStatusResponse,
+)
 from ..security.authz import Principal
-from ..storage.document_store import DocumentStore
+from ..storage.document_record_store import DocumentRecordStore
 from ..storage.job_store import JobStore
 from ..storage.timeline_store import TimelineEvent, TimelineStore
 from ..utils.audit import AuditEvent, get_audit_trail
@@ -133,7 +138,7 @@ class IngestionService:
         graph_service: GraphService | None = None,
         timeline_store: TimelineStore | None = None,
         job_store: JobStore | None = None,
-        document_store: DocumentStore | None = None,
+        document_store: DocumentRecordStore | None = None,
         forensics_service: ForensicsService | None = None,
         executor: ThreadPoolExecutor | None = None,
         worker: IngestionWorker | None = None,
@@ -144,7 +149,8 @@ class IngestionService:
         self.graph_service = graph_service or get_graph_service()
         self.timeline_store = timeline_store or TimelineStore(self.settings.timeline_path)
         self.job_store = job_store or JobStore(self.settings.job_store_dir)
-        self.document_store = document_store or DocumentStore(self.settings.document_store_dir)
+        records_root = self.settings.document_store_dir / "records"
+        self.document_store = document_store or DocumentRecordStore(records_root)
         self.forensics_service = forensics_service or ForensicsService()
         self.credential_registry = CredentialRegistry(self.settings.credentials_registry_path)
         self.executor = executor or _DEFAULT_EXECUTOR
@@ -159,7 +165,13 @@ class IngestionService:
             credential_resolver=self._resolve_credentials,
         )
 
-    def ingest(self, request: IngestionRequest, principal: Principal | None = None) -> str:
+    def ingest(
+        self,
+        request: IngestionRequest,
+        principal: Principal | None = None,
+        *,
+        job_id: str | None = None,
+    ) -> str:
         if not request.sources:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -175,7 +187,7 @@ class IngestionService:
             for source in request.sources
         ]
 
-        job_id = str(uuid4())
+        job_id = job_id or str(uuid4())
         submitted_at = datetime.now(timezone.utc)
         job_record = self._initialise_job_record(job_id, submitted_at, request.sources, actor)
         self.job_store.write_job(job_id, job_record)
@@ -236,6 +248,74 @@ class IngestionService:
                 span.set_status(Status(StatusCode.OK))
             _ingestion_jobs_counter.add(1, attributes={"state": "enqueued"})
         return job_id
+
+    async def ingest_document(
+        self,
+        principal: Principal,
+        document_id: str,
+        file,
+    ) -> IngestionResponse:
+        filename = Path(getattr(file, "filename", None) or f"{document_id}.bin").name
+        workspace = self.settings.ingestion_workspace_dir / document_id / "00_upload"
+        workspace.mkdir(parents=True, exist_ok=True)
+        target = workspace / filename
+        content = await file.read()
+        target.write_bytes(content)
+
+        request = IngestionRequest(
+            sources=[
+                IngestionSource(
+                    type="local",
+                    path=str(workspace),
+                    metadata={
+                        "document_id": document_id,
+                        "file_name": filename,
+                    },
+                )
+            ]
+        )
+        job_id = self.ingest(request, principal=principal, job_id=document_id)
+        return IngestionResponse(job_id=job_id, status="queued")
+
+    async def ingest_text(
+        self,
+        principal: Principal,
+        document_id: str,
+        text: str,
+    ) -> IngestionResponse:
+        workspace = self.settings.ingestion_workspace_dir / document_id / "00_upload"
+        workspace.mkdir(parents=True, exist_ok=True)
+        target = workspace / f"{document_id}.txt"
+        target.write_text(text, encoding="utf-8")
+        request = IngestionRequest(
+            sources=[
+                IngestionSource(
+                    type="local",
+                    path=str(workspace),
+                    metadata={
+                        "document_id": document_id,
+                        "file_name": target.name,
+                    },
+                )
+            ]
+        )
+        job_id = self.ingest(request, principal=principal, job_id=document_id)
+        return IngestionResponse(job_id=job_id, status="queued")
+
+    async def get_ingestion_status(
+        self,
+        principal: Principal,
+        document_id: str,
+    ) -> IngestionStatusResponse:
+        _ = principal
+        try:
+            record = self.get_job(document_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Ingestion job {document_id} not found",
+            ) from exc
+        return IngestionStatusResponse.model_validate(record)
 
     def get_job(self, job_id: str) -> Dict[str, object]:
         record = self.job_store.read_job(job_id)
@@ -394,7 +474,10 @@ class IngestionService:
                         attributes={"ingestion.source_type": source.type, "ingestion.job_id": job_id},
                     ):
                         documents, events, skipped, mutation, reports = self._ingest_materialized_source(
-                            job_id, materialized
+                            job_id,
+                            materialized,
+                            start_stage=None,
+                            stop_stage=None,
                         )
                     source_duration = (perf_counter() - source_started) * 1000.0
                     _ingestion_source_duration.record(
@@ -654,7 +737,12 @@ class IngestionService:
     # region ingestion helpers
 
     def _ingest_materialized_source(
-        self, job_id: str, materialized: MaterializedSource
+        self,
+        job_id: str,
+        materialized: MaterializedSource,
+        *,
+        start_stage: str | None = None,
+        stop_stage: str | None = None,
     ) -> Tuple[
         List[IngestedDocument],
         List[TimelineEvent],
@@ -674,6 +762,8 @@ class IngestionService:
             origin,
             registry=self.loader_registry,
             runtime_config=self.runtime_config,
+            start_stage=start_stage,
+            stop_stage=stop_stage,
         )
 
         documents: List[IngestedDocument] = []
@@ -762,6 +852,20 @@ class IngestionService:
 
             if points:
                 self.vector_service.upsert(points)
+
+            if doc_result.llama_nodes:
+                for node in doc_result.llama_nodes:
+                    metadata = getattr(node, "metadata", None)
+                    if isinstance(metadata, dict):
+                        metadata.setdefault("doc_id", document.id)
+                        metadata.setdefault("source_type", source_type)
+                try:
+                    self.graph_service.ensure_knowledge_index(doc_result.llama_nodes)
+                except RuntimeError:
+                    self.logger.debug(
+                        "LlamaIndex knowledge index unavailable; skipping graph sync",
+                        extra={"doc_id": document.id},
+                    )
 
             for span in doc_result.entities:
                 self._commit_entity(document.id, span, graph_mutation)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Sequence, Optional
 
 from importlib import import_module
 from importlib.util import find_spec
@@ -22,6 +22,7 @@ from .llama_index_factory import (
     create_sentence_splitter,
     create_llm_service, # Added
     BaseLlmService, # Added
+    create_llama_index_llm,
 )
 from .metrics import record_document_yield, record_node_yield, record_pipeline_metrics
 from .settings import LlamaIndexRuntimeConfig
@@ -69,6 +70,7 @@ class DocumentPipelineResult:
     tags: List[str] = field(default_factory=list)
     forensic_analysis_result: Optional[ForensicAnalysisResult] = None # Added
     crypto_tracing_result: Optional[CryptoTracingResult] = None # Added
+    llama_nodes: List[Any] = field(default_factory=list)
 
 
 @dataclass
@@ -90,19 +92,33 @@ def run_ingestion_pipeline(
     *,
     registry: LoaderRegistry,
     runtime_config: LlamaIndexRuntimeConfig,
+    start_stage: str | None = None,
+    stop_stage: str | None = None,
 ) -> PipelineResult:
     """Materialise documents, chunk into nodes, and enrich with embeddings."""
 
-    configure_global_settings(runtime_config)
-    splitter = create_sentence_splitter(runtime_config.tuning)
     embedding_model = create_embedding_model(runtime_config.embedding)
+    llama_index_llm = create_llama_index_llm(runtime_config.llm)
+    configure_global_settings(
+        runtime_config,
+        embedding_model=embedding_model,
+        llm=llama_index_llm,
+    )
+    splitter = create_sentence_splitter(runtime_config.tuning)
     llm_service = create_llm_service(runtime_config.llm) # Create LLM service
 
     with record_pipeline_metrics(source.type.lower(), job_id):
         loaded_documents = registry.load_documents(materialized_root, source, origin=origin)
         record_document_yield(len(loaded_documents), source_type=source.type.lower(), job_id=job_id)
         documents = [
-            _process_loaded_document(loaded, splitter, embedding_model, llm_service) # Pass LLM service
+            _process_loaded_document(
+                loaded,
+                splitter,
+                embedding_model,
+                llm_service,
+                start_stage=start_stage,
+                stop_stage=stop_stage,
+            )
             for loaded in loaded_documents
         ]
         total_nodes = sum(len(doc.nodes) for doc in documents)
@@ -115,47 +131,60 @@ def _process_loaded_document(
     splitter,
     embedding_model,
     llm_service: BaseLlmService, # Accept LLM service
+    *,
+    start_stage: str | None = None,
+    stop_stage: str | None = None,
 ) -> DocumentPipelineResult:
-    nodes = _split_nodes(splitter, loaded.document)
+    stage_order = ["load", "chunk", "embed", "enrich", "forensics"]
+    start_idx = stage_order.index(start_stage) if start_stage in stage_order else 0
+    stop_idx = stage_order.index(stop_stage) if stop_stage in stage_order else len(stage_order) - 1
+
+    def should_run(stage: str) -> bool:
+        idx = stage_order.index(stage)
+        return start_idx <= idx <= stop_idx
+
+    nodes = _split_nodes(splitter, loaded.document) if should_run("chunk") else []
     pipeline_nodes: List[PipelineNodeRecord] = []
-    for index, node in enumerate(nodes):
-        text = node.get_content(metadata_mode=METADATA_MODE_ALL)
-        vector = embedding_model.get_text_embedding(text)
-        metadata = dict(getattr(node, "metadata", {}) or {})
-        metadata.setdefault("source_path", str(loaded.path))
-        metadata.setdefault("source_type", loaded.source.type.lower())
-        pipeline_nodes.append(
-            PipelineNodeRecord(
-                node_id=node.node_id,
-                text=text,
-                embedding=vector,
-                metadata=metadata,
-                chunk_index=index,
+    if should_run("embed"):
+        for index, node in enumerate(nodes):
+            text = node.get_content(metadata_mode=METADATA_MODE_ALL)
+            vector = embedding_model.get_text_embedding(text)
+            metadata = dict(getattr(node, "metadata", {}) or {})
+            metadata.setdefault("source_path", str(loaded.path))
+            metadata.setdefault("source_type", loaded.source.type.lower())
+            pipeline_nodes.append(
+                PipelineNodeRecord(
+                    node_id=node.node_id,
+                    text=text,
+                    embedding=vector,
+                    metadata=metadata,
+                    chunk_index=index,
+                )
             )
-        )
-    entities = extract_entities(loaded.text)
-    triples = extract_triples(loaded.text)
-    
+    entities = extract_entities(loaded.text) if should_run("enrich") else []
+    triples = extract_triples(loaded.text) if should_run("enrich") else []
+
     # Categorization and Tagging
-    categories = categorize_document(loaded.text, llm_service) # Use llm_service
-    tags = tag_document(loaded.text, llm_service) # Use llm_service
+    categories = categorize_document(loaded.text, llm_service) if should_run("enrich") else []
+    tags = tag_document(loaded.text, llm_service) if should_run("enrich") else []
 
     forensic_analysis_result = None
     crypto_tracing_result = None
 
-    doc_type = loaded.source.metadata.get("doc_type")
-    if doc_type == "opposition_documents":
-        forensic_analyzer = ForensicAnalyzer()
-        forensic_analysis_result = forensic_analyzer.analyze_document(
-            document_id=loaded.source.source_id,
-            document_content=loaded.document.text.encode('utf-8'), # Assuming text can be encoded
-            metadata=loaded.source.metadata,
-        )
-        crypto_tracer = CryptoTracer()
-        crypto_tracing_result = crypto_tracer.trace_document_for_crypto(
-            document_content=loaded.document.text,
-            document_id=loaded.source.source_id,
-        )
+    if should_run("forensics"):
+        doc_type = loaded.source.metadata.get("doc_type")
+        if doc_type == "opposition_documents":
+            forensic_analyzer = ForensicAnalyzer()
+            forensic_analysis_result = forensic_analyzer.analyze_document(
+                document_id=loaded.source.source_id,
+                document_content=loaded.document.text.encode('utf-8'), # Assuming text can be encoded
+                metadata=loaded.source.metadata,
+            )
+            crypto_tracer = CryptoTracer()
+            crypto_tracing_result = crypto_tracer.trace_document_for_crypto(
+                document_content=loaded.document.text,
+                document_id=loaded.source.source_id,
+            )
 
     return DocumentPipelineResult(
         loaded=loaded,
@@ -166,6 +195,7 @@ def _process_loaded_document(
         tags=tags,
         forensic_analysis_result=forensic_analysis_result, # Added
         crypto_tracing_result=crypto_tracing_result, # Added
+        llama_nodes=list(nodes),
     )
 
 
