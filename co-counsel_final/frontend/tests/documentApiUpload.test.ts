@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { completeFolderUpload, startFileUpload, startFolderUpload } from '@/services/document_api';
+import { completeFolderUpload, runIngestionStage, startFileUpload, startFolderUpload } from '@/services/document_api';
 
 vi.mock('axios');
 
@@ -50,4 +50,16 @@ test('completeFolderUpload returns job id', async () => {
 
   expect(result.job_id).toBe('case-99');
   expect(mockedAxios.post).toHaveBeenCalledWith('/api/ingestion/folder/folder-1/complete');
+});
+
+test('runIngestionStage posts to stage endpoint', async () => {
+  mockedAxios.post = vi.fn().mockResolvedValue({
+    data: { job_id: 'case-99', status: 'running' },
+  });
+
+  await runIngestionStage('case-99', 'enrich', true);
+
+  expect(mockedAxios.post).toHaveBeenCalledWith('/api/ingestion/case-99/stage/enrich/run', {
+    resume_downstream: true,
+  });
 });

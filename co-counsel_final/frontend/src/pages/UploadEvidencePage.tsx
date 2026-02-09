@@ -25,6 +25,7 @@ const UploadEvidencePage: React.FC = () => {
   const [caseId, setCaseId] = useState('default-case-id'); // Placeholder for case ID
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [folderSession, setFolderSession] = useState<FolderUploadStartResponse | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [folderProgress, setFolderProgress] = useState<{
     status: 'idle' | 'uploading' | 'complete' | 'error';
     totalFiles: number;
@@ -97,6 +98,7 @@ const UploadEvidencePage: React.FC = () => {
       }
 
       const ingestion = await completeFolderUpload(response.folder_id);
+      setActiveJobId(ingestion.job_id);
       setMessage({
         type: 'success',
         text: `Folder upload complete. Ingestion job ${ingestion.job_id} queued.`,
@@ -191,7 +193,7 @@ const UploadEvidencePage: React.FC = () => {
       </div>
 
       <div className="mt-6">
-        <IngestionPipelinePanel />
+        <IngestionPipelinePanel jobId={activeJobId} />
       </div>
 
       <h2 className="text-xl font-bold mt-8 mb-4">Uploaded Documents</h2>

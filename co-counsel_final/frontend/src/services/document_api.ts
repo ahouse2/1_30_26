@@ -184,3 +184,17 @@ export const completeFolderUpload = async (folderId: string): Promise<IngestionS
   );
   return response.data;
 };
+
+export const runIngestionStage = async (
+  jobId: string,
+  stage: 'load' | 'chunk' | 'embed' | 'enrich' | 'forensics',
+  resumeDownstream: boolean
+): Promise<IngestionStatusResponse> => {
+  const response = await axios.post<IngestionStatusResponse>(
+    `/api/ingestion/${jobId}/stage/${stage}/run`,
+    {
+      resume_downstream: resumeDownstream,
+    }
+  );
+  return response.data;
+};
