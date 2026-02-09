@@ -9,7 +9,6 @@ from .fallback import (
 from .loader_registry import LoaderRegistry, LoadedDocument
 from .metrics import record_document_yield, record_node_yield, record_pipeline_metrics
 from .ocr import OcrEngine, OcrResult
-from .pipeline import PipelineResult, run_ingestion_pipeline
 from .settings import (
     EmbeddingConfig,
     EmbeddingProvider,
@@ -33,8 +32,6 @@ __all__ = [
     "record_pipeline_metrics",
     "OcrEngine",
     "OcrResult",
-    "PipelineResult",
-    "run_ingestion_pipeline",
     "EmbeddingConfig",
     "EmbeddingProvider",
     "IngestionCostMode",
