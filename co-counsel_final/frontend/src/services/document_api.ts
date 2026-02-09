@@ -126,3 +126,61 @@ export const startFolderUpload = async (
   });
   return response.data;
 };
+
+export interface FileUploadStartResponse {
+  upload_id: string;
+  chunk_size: number;
+  folder_id: string;
+  case_id?: string | null;
+  relative_path: string;
+}
+
+export interface FileUploadCompleteResponse {
+  upload_id: string;
+  relative_path: string;
+  final_path: string;
+}
+
+export const startFileUpload = async (
+  folderId: string,
+  relativePath: string,
+  totalBytes: number
+): Promise<FileUploadStartResponse> => {
+  const response = await axios.post<FileUploadStartResponse>(
+    `/api/ingestion/folder/${folderId}/file/start`,
+    {
+      relative_path: relativePath,
+      total_bytes: totalBytes,
+    }
+  );
+  return response.data;
+};
+
+export const uploadFileChunk = async (
+  uploadId: string,
+  chunkIndex: number,
+  data: Blob
+): Promise<void> => {
+  const formData = new FormData();
+  formData.append('chunk_index', String(chunkIndex));
+  formData.append('chunk', data, 'chunk.bin');
+  await axios.post(`/api/ingestion/file/${uploadId}/chunk`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const completeFileUpload = async (
+  uploadId: string
+): Promise<FileUploadCompleteResponse> => {
+  const response = await axios.post<FileUploadCompleteResponse>(
+    `/api/ingestion/file/${uploadId}/complete`
+  );
+  return response.data;
+};
+
+export const completeFolderUpload = async (folderId: string): Promise<IngestionStatusResponse> => {
+  const response = await axios.post<IngestionStatusResponse>(
+    `/api/ingestion/folder/${folderId}/complete`
+  );
+  return response.data;
+};

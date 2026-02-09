@@ -2,7 +2,15 @@ import React, { useEffect, useState } from 'react';
 import DocumentUploadZone from '../components/DocumentUploadZone';
 import { FolderUploadZone } from '../components/FolderUploadZone';
 import { IngestionPipelinePanel } from '../components/IngestionPipelinePanel';
-import { getIngestionStatus, startFolderUpload, type FolderUploadStartResponse } from '../services/document_api';
+import {
+  completeFileUpload,
+  completeFolderUpload,
+  getIngestionStatus,
+  startFileUpload,
+  startFolderUpload,
+  uploadFileChunk,
+  type FolderUploadStartResponse,
+} from '../services/document_api';
 
 interface UploadedDocument {
   job_id: string;
@@ -17,6 +25,12 @@ const UploadEvidencePage: React.FC = () => {
   const [caseId, setCaseId] = useState('default-case-id'); // Placeholder for case ID
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [folderSession, setFolderSession] = useState<FolderUploadStartResponse | null>(null);
+  const [folderProgress, setFolderProgress] = useState<{
+    status: 'idle' | 'uploading' | 'complete' | 'error';
+    totalFiles: number;
+    uploadedFiles: number;
+    currentFile?: string;
+  }>({ status: 'idle', totalFiles: 0, uploadedFiles: 0 });
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleUploadSuccess = (response: any) => {
@@ -38,15 +52,59 @@ const UploadEvidencePage: React.FC = () => {
 
   const handleFolderStart = async (
     folderName: string,
-    docType: 'my_documents' | 'opposition_documents'
+    docType: 'my_documents' | 'opposition_documents',
+    files: FileList
   ) => {
     try {
       const response = await startFolderUpload(folderName, docType);
       setFolderSession(response);
       setCaseId(response.case_id);
+      setFolderProgress({
+        status: 'uploading',
+        totalFiles: files.length,
+        uploadedFiles: 0,
+      });
       setMessage({ type: 'success', text: `Folder session started for ${folderName}` });
+
+      const fileList = Array.from(files);
+      for (const file of fileList) {
+        const relativePath =
+          (file as unknown as { webkitRelativePath?: string }).webkitRelativePath ||
+          file.name;
+        setFolderProgress((prev) => ({
+          ...prev,
+          currentFile: relativePath,
+        }));
+        const fileSession = await startFileUpload(
+          response.folder_id,
+          relativePath,
+          file.size
+        );
+        const chunkSize = fileSession.chunk_size || response.chunk_size;
+        let offset = 0;
+        let chunkIndex = 0;
+        while (offset < file.size) {
+          const slice = file.slice(offset, offset + chunkSize);
+          await uploadFileChunk(fileSession.upload_id, chunkIndex, slice);
+          offset += chunkSize;
+          chunkIndex += 1;
+        }
+        await completeFileUpload(fileSession.upload_id);
+        setFolderProgress((prev) => ({
+          ...prev,
+          uploadedFiles: prev.uploadedFiles + 1,
+        }));
+      }
+
+      const ingestion = await completeFolderUpload(response.folder_id);
+      setMessage({
+        type: 'success',
+        text: `Folder upload complete. Ingestion job ${ingestion.job_id} queued.`,
+      });
+      setFolderProgress((prev) => ({ ...prev, status: 'complete' }));
     } catch (error: any) {
       console.error('Folder upload start error:', error);
+      setFolderProgress((prev) => ({ ...prev, status: 'error' }));
       setMessage({ type: 'error', text: `Folder upload failed: ${error.response?.data?.detail || error.message}` });
     }
   };
@@ -113,6 +171,23 @@ const UploadEvidencePage: React.FC = () => {
 
       <div className="mt-6">
         <FolderUploadZone onFolderStart={handleFolderStart} />
+        {folderProgress.status !== 'idle' && (
+          <div className="mt-4 rounded-md border border-gray-200 bg-white p-3 text-sm">
+            <p className="font-medium">Folder Upload Status</p>
+            <p className="text-gray-600">
+              {folderProgress.uploadedFiles}/{folderProgress.totalFiles} files uploaded
+            </p>
+            {folderProgress.currentFile && (
+              <p className="text-gray-500">Current: {folderProgress.currentFile}</p>
+            )}
+            {folderProgress.status === 'complete' && (
+              <p className="text-green-700 mt-1">Upload complete. Ingestion started.</p>
+            )}
+            {folderProgress.status === 'error' && (
+              <p className="text-red-600 mt-1">Upload encountered an error.</p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-6">
