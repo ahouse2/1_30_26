@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import DocumentUploadZone from '../components/DocumentUploadZone';
-import FolderUpload from '../components/Upload/FolderUpload';
-import { uploadFolder } from '../services/document_api';
+import { FolderUploadZone } from '../components/FolderUploadZone';
+import { IngestionPipelinePanel } from '../components/IngestionPipelinePanel';
+import { getIngestionStatus, startFolderUpload, type FolderUploadStartResponse } from '../services/document_api';
 
 interface UploadedDocument {
+  job_id: string;
   doc_id: string;
   file_name: string;
   doc_type: string;
@@ -11,19 +13,15 @@ interface UploadedDocument {
   pipeline_result: string[];
 }
 
-interface FolderAutomationStatus {
-  job_id: string;
-  stages: { name: string; status: string; message?: string | null }[];
-}
-
 const UploadEvidencePage: React.FC = () => {
   const [caseId, setCaseId] = useState('default-case-id'); // Placeholder for case ID
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
-  const [folderStatus, setFolderStatus] = useState<FolderAutomationStatus | null>(null);
+  const [folderSession, setFolderSession] = useState<FolderUploadStartResponse | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleUploadSuccess = (response: any) => {
     setUploadedDocuments((prevDocs) => [...prevDocs, {
+      job_id: response.data.job_id,
       doc_id: response.data.doc_id,
       file_name: response.data.file_name,
       doc_type: response.data.doc_type,
@@ -38,23 +36,48 @@ const UploadEvidencePage: React.FC = () => {
     setMessage({ type: 'error', text: `Upload failed: ${error.response?.data?.detail || error.message}` });
   };
 
-  const handleFolderSelected = async (files: File[]) => {
-    if (files.length === 0) return;
+  const handleFolderStart = async (
+    folderName: string,
+    docType: 'my_documents' | 'opposition_documents'
+  ) => {
     try {
-      const response = await uploadFolder({ caseId, files });
-      setFolderStatus({
-        job_id: response.job_id,
-        stages: response.stages.map((stage) => ({
-          name: stage.name,
-          status: stage.status,
-          message: stage.message ?? null,
-        })),
-      });
-      setMessage({ type: 'success', text: `Folder queued for ingestion (job ${response.job_id}).` });
+      const response = await startFolderUpload(folderName, docType);
+      setFolderSession(response);
+      setCaseId(response.case_id);
+      setMessage({ type: 'success', text: `Folder session started for ${folderName}` });
     } catch (error: any) {
-      handleUploadError(error);
+      console.error('Folder upload start error:', error);
+      setMessage({ type: 'error', text: `Folder upload failed: ${error.response?.data?.detail || error.message}` });
     }
   };
+
+  useEffect(() => {
+    const activeJobs = uploadedDocuments.filter((doc) =>
+      doc.ingestion_status === 'queued' || doc.ingestion_status === 'running'
+    );
+    if (activeJobs.length === 0) return;
+
+    const interval = setInterval(async () => {
+      await Promise.all(
+        activeJobs.map(async (doc) => {
+          try {
+            const status = await getIngestionStatus(doc.job_id);
+            setUploadedDocuments((prevDocs) =>
+              prevDocs.map((prevDoc) =>
+                prevDoc.job_id === doc.job_id
+                  ? { ...prevDoc, ingestion_status: status.status }
+                  : prevDoc
+              )
+            );
+          } catch (error) {
+            console.error('Status check error:', error);
+          }
+        })
+      );
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [uploadedDocuments]);
 
   return (
     <div className="container mx-auto p-4">
@@ -75,6 +98,11 @@ const UploadEvidencePage: React.FC = () => {
           value={caseId}
           onChange={(e) => setCaseId(e.target.value)}
         />
+        {folderSession && (
+          <p className="mt-2 text-xs text-gray-500">
+            Auto-created case from folder upload: {folderSession.case_id}
+          </p>
+        )}
       </div>
 
       <DocumentUploadZone
@@ -83,25 +111,12 @@ const UploadEvidencePage: React.FC = () => {
         onUploadError={handleUploadError}
       />
 
-      <div className="mt-8">
-        <h2 className="text-xl font-bold mb-2">Folder Upload</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Drag a folder to ingest everything at once and trigger the automated pipeline.
-        </p>
-        <FolderUpload onFolderSelected={handleFolderSelected} />
-        {folderStatus && (
-          <div className="mt-4 rounded-md border border-gray-200 bg-white p-4 text-sm">
-            <p className="font-medium text-gray-800">Automation job: {folderStatus.job_id}</p>
-            <ul className="mt-2 space-y-1 text-gray-600">
-              {folderStatus.stages.map((stage) => (
-                <li key={stage.name}>
-                  <span className="font-medium">{stage.name}</span>: {stage.status}
-                  {stage.message ? ` — ${stage.message}` : ''}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+      <div className="mt-6">
+        <FolderUploadZone onFolderStart={handleFolderStart} />
+      </div>
+
+      <div className="mt-6">
+        <IngestionPipelinePanel />
       </div>
 
       <h2 className="text-xl font-bold mt-8 mb-4">Uploaded Documents</h2>
@@ -118,6 +133,7 @@ const UploadEvidencePage: React.FC = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categories</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doc ID</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job ID</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -128,6 +144,7 @@ const UploadEvidencePage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{doc.ingestion_status}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{doc.pipeline_result.join(', ')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{doc.doc_id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{doc.job_id}</td>
                   </tr>
                 ))}
               </tbody>

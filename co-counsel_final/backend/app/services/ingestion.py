@@ -21,9 +21,14 @@ from opentelemetry import metrics, trace
 from opentelemetry.trace import Status, StatusCode
 
 from ..config import get_settings
-from ..models.api import IngestionRequest, IngestionSource
+from ..models.api import (
+    IngestionRequest,
+    IngestionResponse,
+    IngestionSource,
+    IngestionStatusResponse,
+)
 from ..security.authz import Principal
-from ..storage.document_store import DocumentStore
+from ..storage.document_record_store import DocumentRecordStore
 from ..storage.job_store import JobStore
 from ..storage.timeline_store import TimelineEvent, TimelineStore
 from ..utils.audit import AuditEvent, get_audit_trail
@@ -32,7 +37,6 @@ from ..utils.text import find_dates, sentence_containing
 from ..utils.triples import EntitySpan, Triple, normalise_entity_id
 from .forensics import ForensicsReport, ForensicsService
 from .graph import GraphService, get_graph_service
-from .automation_pipeline import AutomationPipelineService, get_automation_pipeline_service
 from .ingestion_sources import MaterializedSource, build_connector
 from .ingestion_worker import (
     IngestionJobAlreadyQueued,
@@ -52,6 +56,7 @@ _TEXT_EXTENSIONS = {".txt", ".md", ".json", ".log", ".rtf", ".html", ".htm"}
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 _FINANCIAL_EXTENSIONS = {".csv"}
 _EMAIL_EXTENSIONS = {".eml", ".msg"}
+_STAGE_ORDER = ("load", "chunk", "embed", "enrich", "forensics")
 
 LOGGER = logging.getLogger("backend.services.ingestion")
 
@@ -134,9 +139,8 @@ class IngestionService:
         graph_service: GraphService | None = None,
         timeline_store: TimelineStore | None = None,
         job_store: JobStore | None = None,
-        document_store: DocumentStore | None = None,
+        document_store: DocumentRecordStore | None = None,
         forensics_service: ForensicsService | None = None,
-        automation_service: AutomationPipelineService | None = None,
         executor: ThreadPoolExecutor | None = None,
         worker: IngestionWorker | None = None,
     ) -> None:
@@ -146,9 +150,9 @@ class IngestionService:
         self.graph_service = graph_service or get_graph_service()
         self.timeline_store = timeline_store or TimelineStore(self.settings.timeline_path)
         self.job_store = job_store or JobStore(self.settings.job_store_dir)
-        self.document_store = document_store or DocumentStore(self.settings.document_store_dir)
+        records_root = self.settings.document_store_dir / "records"
+        self.document_store = document_store or DocumentRecordStore(records_root)
         self.forensics_service = forensics_service or ForensicsService()
-        self.automation_service = automation_service or get_automation_pipeline_service()
         self.credential_registry = CredentialRegistry(self.settings.credentials_registry_path)
         self.executor = executor or _DEFAULT_EXECUTOR
         self.worker = worker
@@ -162,7 +166,13 @@ class IngestionService:
             credential_resolver=self._resolve_credentials,
         )
 
-    def ingest(self, request: IngestionRequest, principal: Principal | None = None) -> str:
+    def ingest(
+        self,
+        request: IngestionRequest,
+        principal: Principal | None = None,
+        *,
+        job_id: str | None = None,
+    ) -> str:
         if not request.sources:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -178,23 +188,9 @@ class IngestionService:
             for source in request.sources
         ]
 
-        job_id = str(uuid4())
+        job_id = job_id or str(uuid4())
         submitted_at = datetime.now(timezone.utc)
-        if request.automation:
-            automation_payload = request.automation.model_dump(exclude_none=True)
-        else:
-            automation_payload = {
-                "auto_run": request.auto_run,
-                "stages": request.phases or [],
-                "case_id": request.case_id,
-            }
-        job_record = self._initialise_job_record(
-            job_id,
-            submitted_at,
-            request.sources,
-            actor,
-            automation=automation_payload,
-        )
+        job_record = self._initialise_job_record(job_id, submitted_at, request.sources, actor)
         self.job_store.write_job(job_id, job_record)
 
         sources_attribute = ",".join(sorted({source.type for source in request.sources}))
@@ -253,6 +249,119 @@ class IngestionService:
                 span.set_status(Status(StatusCode.OK))
             _ingestion_jobs_counter.add(1, attributes={"state": "enqueued"})
         return job_id
+
+    async def ingest_document(
+        self,
+        principal: Principal,
+        document_id: str,
+        file,
+    ) -> IngestionResponse:
+        filename = Path(getattr(file, "filename", None) or f"{document_id}.bin").name
+        workspace = self.settings.ingestion_workspace_dir / document_id / "00_upload"
+        workspace.mkdir(parents=True, exist_ok=True)
+        target = workspace / filename
+        content = await file.read()
+        target.write_bytes(content)
+
+        request = IngestionRequest(
+            sources=[
+                IngestionSource(
+                    type="local",
+                    path=str(workspace),
+                    metadata={
+                        "document_id": document_id,
+                        "file_name": filename,
+                    },
+                )
+            ]
+        )
+        job_id = self.ingest(request, principal=principal, job_id=document_id)
+        return IngestionResponse(job_id=job_id, status="queued")
+
+    async def ingest_text(
+        self,
+        principal: Principal,
+        document_id: str,
+        text: str,
+    ) -> IngestionResponse:
+        workspace = self.settings.ingestion_workspace_dir / document_id / "00_upload"
+        workspace.mkdir(parents=True, exist_ok=True)
+        target = workspace / f"{document_id}.txt"
+        target.write_text(text, encoding="utf-8")
+        request = IngestionRequest(
+            sources=[
+                IngestionSource(
+                    type="local",
+                    path=str(workspace),
+                    metadata={
+                        "document_id": document_id,
+                        "file_name": target.name,
+                    },
+                )
+            ]
+        )
+        job_id = self.ingest(request, principal=principal, job_id=document_id)
+        return IngestionResponse(job_id=job_id, status="queued")
+
+    async def get_ingestion_status(
+        self,
+        principal: Principal,
+        document_id: str,
+    ) -> IngestionStatusResponse:
+        _ = principal
+        try:
+            record = self.get_job(document_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Ingestion job {document_id} not found",
+            ) from exc
+        return IngestionStatusResponse.model_validate(record)
+
+    async def run_stage(
+        self,
+        principal: Principal,
+        job_id: str,
+        stage: str,
+        *,
+        resume_downstream: bool = False,
+    ) -> IngestionResponse:
+        _ = principal
+        allowed_stages = {"load", "chunk", "embed", "enrich", "forensics"}
+        if stage not in allowed_stages:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown stage '{stage}'. Expected one of: {', '.join(sorted(allowed_stages))}",
+            )
+        try:
+            job_record = self.job_store.read_job(job_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Ingestion job {job_id} not found",
+            ) from exc
+        sources_payload = job_record.get("sources") or []
+        sources = [IngestionSource.model_validate(source) for source in sources_payload]
+        if not sources:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Ingestion job {job_id} has no sources to process",
+            )
+        self._ensure_job_defaults(job_record, sources)
+        start_stage = stage
+        stop_stage = None if resume_downstream else stage
+        self._transition_job(job_record, "running")
+        self.job_store.write_job(job_id, job_record)
+        future = self.executor.submit(
+            self._execute_job,
+            job_id,
+            IngestionRequest(sources=sources),
+            job_record,
+            start_stage,
+            stop_stage,
+        )
+        future.add_done_callback(self._log_job_failure(job_id))
+        return IngestionResponse(job_id=job_id, status="running")
 
     def get_job(self, job_id: str) -> Dict[str, object]:
         record = self.job_store.read_job(job_id)
@@ -384,6 +493,8 @@ class IngestionService:
         job_id: str,
         request: IngestionRequest,
         job_record: Dict[str, object],
+        start_stage: str | None = None,
+        stop_stage: str | None = None,
     ) -> None:
         all_documents: List[IngestedDocument] = []
         all_events: List[TimelineEvent] = []
@@ -396,6 +507,10 @@ class IngestionService:
         with _tracer.start_as_current_span("ingestion.execute") as span:
             span.set_attribute("ingestion.job_id", job_id)
             span.set_attribute("ingestion.source_count", len(request.sources))
+            stage_names = self._resolve_stage_range(start_stage, stop_stage)
+            self._update_stage_status(job_record, stage_names, "running")
+            self._touch_job(job_record)
+            self.job_store.write_job(job_id, job_record)
             try:
                 for index, source in enumerate(request.sources):
                     current_source_type = source.type
@@ -411,7 +526,10 @@ class IngestionService:
                         attributes={"ingestion.source_type": source.type, "ingestion.job_id": job_id},
                     ):
                         documents, events, skipped, mutation, reports = self._ingest_materialized_source(
-                            job_id, materialized
+                            job_id,
+                            materialized,
+                            start_stage=start_stage,
+                            stop_stage=stop_stage,
                         )
                     source_duration = (perf_counter() - source_started) * 1000.0
                     _ingestion_source_duration.record(
@@ -540,23 +658,9 @@ class IngestionService:
         timeline_details["highlights"] = enrichment_stats.highlights
         timeline_details["relations"] = enrichment_stats.relations
         timeline_details["enriched"] = enrichment_stats.mutated
+        self._update_stage_status(job_record, stage_names, "completed")
         self._transition_job(job_record, "succeeded")
         self.job_store.write_job(job_id, job_record)
-        automation_payload = job_record.get("automation") or {}
-        if automation_payload.get("auto_run"):
-            try:
-                self.automation_service.run_stages(
-                    job_id,
-                    automation_payload.get("stages", []),
-                    question=automation_payload.get("question"),
-                    case_id=automation_payload.get("case_id"),
-                    autonomy_level=automation_payload.get("autonomy_level", "balanced"),
-                )
-            except Exception as exc:  # pragma: no cover - automation should not fail ingestion
-                self.logger.exception(
-                    "Automation pipeline failed after ingestion",
-                    extra={"job_id": job_id, "error": str(exc)},
-                )
         self.logger.info(
             "Ingestion completed",
             extra={"job_id": job_id, "documents": len(all_documents), "events": len(all_events)},
@@ -575,35 +679,6 @@ class IngestionService:
             },
             actor=self._job_actor(job_record),
         )
-
-        self._after_ingestion(
-            case_id=getattr(request, "case_id", None) or job_id,
-            auto_run=getattr(request, "auto_run", True),
-            phases=getattr(request, "phases", None) or [],
-        )
-
-
-    def _after_ingestion(self, case_id: str, auto_run: bool, phases: list[str]) -> None:
-        if not auto_run:
-            return
-        workflow = getattr(self, "workflow_service", None)
-        if workflow is None:
-            from .workflow import CaseWorkflowService
-            workflow = CaseWorkflowService(self.settings.workflow_storage_path)
-        workflow.run_phases(case_id=case_id, phases=phases or [
-            "ingestion",
-            "preprocess",
-            "forensics",
-            "parsing_chunking",
-            "indexing",
-            "court_sync",
-            "fact_extraction",
-            "timeline",
-            "legal_theories",
-            "strategy",
-            "drafting",
-            "qa_review",
-        ], payload={})
 
     def _ensure_job_defaults(
         self, job_record: Dict[str, object], sources: List[IngestionSource]
@@ -631,9 +706,75 @@ class IngestionService:
         graph.setdefault("nodes", 0)
         graph.setdefault("edges", 0)
         graph.setdefault("triples", 0)
-        details.setdefault("automation", {"stages": {}, "results": {"legal_frameworks": []}})
+        stages = details.setdefault("stages", [])
+        if not stages:
+            details["stages"] = [
+                {
+                    "name": stage,
+                    "status": "pending",
+                    "started_at": None,
+                    "completed_at": None,
+                    "warnings": [],
+                }
+                for stage in _STAGE_ORDER
+            ]
+        else:
+            existing = {stage.get("name") for stage in stages if isinstance(stage, dict)}
+            for stage_name in _STAGE_ORDER:
+                if stage_name not in existing:
+                    stages.append(
+                        {
+                            "name": stage_name,
+                            "status": "pending",
+                            "started_at": None,
+                            "completed_at": None,
+                            "warnings": [],
+                        }
+                    )
+            for stage in stages:
+                if not isinstance(stage, dict):
+                    continue
+                stage.setdefault("status", "pending")
+                stage.setdefault("started_at", None)
+                stage.setdefault("completed_at", None)
+                stage.setdefault("warnings", [])
         job_record.setdefault("requested_by", self._system_actor())
-        job_record.setdefault("automation", None)
+
+    def _resolve_stage_range(
+        self,
+        start_stage: str | None,
+        stop_stage: str | None,
+    ) -> List[str]:
+        start_idx = (
+            _STAGE_ORDER.index(start_stage)
+            if start_stage in _STAGE_ORDER
+            else 0
+        )
+        stop_idx = (
+            _STAGE_ORDER.index(stop_stage)
+            if stop_stage in _STAGE_ORDER
+            else len(_STAGE_ORDER) - 1
+        )
+        return list(_STAGE_ORDER[start_idx : stop_idx + 1])
+
+    def _update_stage_status(
+        self,
+        job_record: Dict[str, object],
+        stage_names: List[str],
+        status_value: str,
+    ) -> None:
+        details = job_record.setdefault("status_details", {})
+        stages = details.setdefault("stages", [])
+        now_iso = self._now_iso()
+        for stage in stages:
+            if not isinstance(stage, dict):
+                continue
+            if stage.get("name") in stage_names:
+                stage["status"] = status_value
+                if status_value == "running" and not stage.get("started_at"):
+                    stage["started_at"] = now_iso
+                if status_value in {"completed", "failed"}:
+                    stage["completed_at"] = now_iso
 
     def _refresh_timeline_enrichments(self) -> EnrichmentStats:
         service = TimelineService(store=self.timeline_store, graph_service=self.graph_service)
@@ -717,7 +858,12 @@ class IngestionService:
     # region ingestion helpers
 
     def _ingest_materialized_source(
-        self, job_id: str, materialized: MaterializedSource
+        self,
+        job_id: str,
+        materialized: MaterializedSource,
+        *,
+        start_stage: str | None = None,
+        stop_stage: str | None = None,
     ) -> Tuple[
         List[IngestedDocument],
         List[TimelineEvent],
@@ -737,6 +883,8 @@ class IngestionService:
             origin,
             registry=self.loader_registry,
             runtime_config=self.runtime_config,
+            start_stage=start_stage,
+            stop_stage=stop_stage,
         )
 
         documents: List[IngestedDocument] = []
@@ -825,6 +973,20 @@ class IngestionService:
 
             if points:
                 self.vector_service.upsert(points)
+
+            if doc_result.llama_nodes:
+                for node in doc_result.llama_nodes:
+                    metadata = getattr(node, "metadata", None)
+                    if isinstance(metadata, dict):
+                        metadata.setdefault("doc_id", document.id)
+                        metadata.setdefault("source_type", source_type)
+                try:
+                    self.graph_service.ensure_knowledge_index(doc_result.llama_nodes)
+                except RuntimeError:
+                    self.logger.debug(
+                        "LlamaIndex knowledge index unavailable; skipping graph sync",
+                        extra={"doc_id": document.id},
+                    )
 
             for span in doc_result.entities:
                 self._commit_entity(document.id, span, graph_mutation)
@@ -1063,9 +1225,18 @@ class IngestionService:
         submitted_at: datetime,
         sources: List[IngestionSource],
         actor: Dict[str, Any] | None = None,
-        automation: Dict[str, Any] | None = None,
     ) -> Dict[str, object]:
         iso = submitted_at.isoformat()
+        stages = [
+            {
+                "name": stage,
+                "status": "pending",
+                "started_at": None,
+                "completed_at": None,
+                "warnings": [],
+            }
+            for stage in _STAGE_ORDER
+        ]
         return {
             "job_id": job_id,
             "status": "queued",
@@ -1075,14 +1246,13 @@ class IngestionService:
             "documents": [],
             "errors": [],
             "status_details": {
+                "stages": stages,
                 "ingestion": {"documents": 0, "skipped": []},
                 "timeline": {"events": 0},
                 "forensics": {"artifacts": [], "last_run_at": None},
                 "graph": {"nodes": 0, "edges": 0, "triples": 0},
-                "automation": {"stages": {}, "results": {"legal_frameworks": []}},
             },
             "requested_by": actor or self._system_actor(),
-            "automation": automation,
         }
 
     def _transition_job(self, job_record: Dict[str, object], status_value: str) -> None:
@@ -1142,130 +1312,6 @@ def _handle_ingestion_task(task: IngestionTask) -> None:
         # Job manifest already records failure details; suppress to avoid worker crash logs.
         return
 
-
-
-
-    def _latest_job_record(self) -> dict | None:
-        jobs = self.job_store.list_jobs()
-        if not jobs:
-            return None
-        return sorted(jobs, key=lambda item: item.get("updated_at", ""))[-1]
-
-    def _sources_from_job(self, job_record: dict) -> list[IngestionSource]:
-        sources = job_record.get("sources", [])
-        return [IngestionSource(**source) for source in sources]
-
-    def summarize_latest(self, case_id: str) -> dict:
-        jobs = self.job_store.list_jobs()
-        if not jobs:
-            return {"case_id": case_id, "status": "unknown", "job": None}
-        latest = sorted(jobs, key=lambda item: item.get("updated_at", ""))[-1]
-        return {"case_id": case_id, "status": latest.get("status"), "job": latest}
-
-    def preprocess_case(self, case_id: str) -> dict:
-        # Currently a no-op placeholder; returns summary for now
-        return {"case_id": case_id, "status": "completed", "step": "preprocess"}
-
-    def parse_and_chunk(self, case_id: str) -> dict:
-
-        job = self._latest_job_record()
-        if not job:
-            return {"case_id": case_id, "status": "skipped", "reason": "no_jobs"}
-        sources = self._sources_from_job(job)
-        results = []
-        for index, source in enumerate(sources):
-            connector = build_connector(source.type, self.settings, self.credential_registry, self.logger)
-            materialized = connector.materialize(job["job_id"], index, source)
-            result = run_ingestion_pipeline(
-                job["job_id"],
-                materialized.root,
-                source,
-                materialized.origin or source.type,
-                registry=self.loader_registry,
-                runtime_config=self.runtime_config,
-            )
-            results.append(result)
-        return {
-            "case_id": case_id,
-            "status": "completed",
-            "step": "parsing_chunking",
-            "documents": sum(len(r.documents) for r in results),
-            "nodes": sum(r.node_count for r in results),
-            "llama_nodes": [
-                {
-                    "id": node.node_id,
-                    "type": "Chunk",
-                    "properties": node.metadata | {"text": node.text},
-                }
-                for r in results
-                for doc in r.documents
-                for node in doc.nodes
-            ],
-        }
-
-    def index_case(self, case_id: str) -> dict:
-
-        job = self._latest_job_record()
-        if not job:
-            return {"case_id": case_id, "status": "skipped", "reason": "no_jobs"}
-        sources = self._sources_from_job(job)
-        total_nodes = 0
-        for index, source in enumerate(sources):
-            connector = build_connector(source.type, self.settings, self.credential_registry, self.logger)
-            materialized = connector.materialize(job["job_id"], index, source)
-            result = run_ingestion_pipeline(
-                job["job_id"],
-                materialized.root,
-                source,
-                materialized.origin or source.type,
-                registry=self.loader_registry,
-                runtime_config=self.runtime_config,
-            )
-            for doc in result.documents:
-                total_nodes += len(doc.nodes)
-                for triple in doc.triples:
-                    self.graph_service.upsert_entity(
-                        triple.subject.label,
-                        triple.subject.entity_type,
-                        {"label": triple.subject.label},
-                    )
-                    self.graph_service.upsert_entity(
-                        triple.obj.label,
-                        triple.obj.entity_type,
-                        {"label": triple.obj.label},
-                    )
-                    self.graph_service.merge_relation(
-                        triple.subject.label,
-                        triple.predicate.upper(),
-                        triple.obj.label,
-                        {"evidence": triple.evidence},
-                    )
-                try:
-                    from qdrant_client.http import models as qmodels
-                except Exception:
-                    qmodels = None
-                if qmodels is not None:
-                    points = [
-                        qmodels.PointStruct(
-                            id=node.node_id,
-                            vector=node.embedding,
-                            payload={
-                                "text": node.text,
-                                "case_id": case_id,
-                                **node.metadata,
-                            },
-                        )
-                        for node in doc.nodes
-                    ]
-                    if points:
-                        self.vector_service.upsert(points)
-        return {
-            "case_id": case_id,
-            "status": "completed",
-            "step": "indexing",
-            "nodes": total_nodes,
-            "graph": {"nodes": [], "edges": []},
-        }
 
 def get_ingestion_worker() -> IngestionWorker:
     global _WORKER_INSTANCE

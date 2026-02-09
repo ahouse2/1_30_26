@@ -1,47 +1,34 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field, HttpUrl, ConfigDict
-
-
-class SourceType(str, Enum):
-    FILE = "file"
-    FOLDER = "folder"
-    URL = "web"
-    S3 = "s3"
 
 
 class IngestionSource(BaseModel):
     type: str = Field(description="Source type identifier")
     path: Optional[str] = Field(default=None, description="Filesystem path for local sources")
     credRef: Optional[str] = Field(default=None, description="Credential reference for remote sources")
-    source_id: Optional[str] = Field(default=None, description="Optional source identifier")
-    uri: Optional[str] = Field(default=None, description="Optional source URI")
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
-
-class AutomationPreferences(BaseModel):
-    auto_run: bool = Field(default=True, description="Run downstream stages automatically after ingestion.")
-    stages: List[Literal["graph", "forensics", "legal_theory", "timeline", "presentation"]] = Field(
-        default_factory=lambda: ["graph", "forensics", "legal_theory", "timeline", "presentation"],
-    )
-    question: Optional[str] = Field(
-        default=None, description="Question guiding legal theory synthesis."
-    )
-    case_id: Optional[str] = Field(default=None, description="Case identifier for downstream workflows.")
-    autonomy_level: Literal["manual", "balanced", "autonomous"] = Field(default="balanced")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Optional source metadata")
 
 
 class IngestionRequest(BaseModel):
     sources: List[IngestionSource]
-    case_id: Optional[str] = None
-    auto_run: bool = True
-    phases: List[str] = Field(default_factory=list)
-    automation: Optional["AutomationPreferences"] = None
-    automation: Optional["AutomationPreferences"] = None
+
+
+class IngestionTextRequest(BaseModel):
+    document_id: str
+    text: str
+
+
+class FolderUploadStartRequest(BaseModel):
+    folder_name: str
+    doc_type: Literal["my_documents", "opposition_documents"]
+
+
+class StageRunRequest(BaseModel):
+    resume_downstream: bool = Field(default=False)
 
 
 class IngestionResponse(BaseModel):
@@ -49,6 +36,18 @@ class IngestionResponse(BaseModel):
     status: Literal["queued", "running", "succeeded", "failed", "cancelled"] = Field(
         description="Current job status"
     )
+
+
+class UploadStartResponse(BaseModel):
+    upload_id: str
+    case_id: str
+    chunk_size: int
+
+
+class FolderUploadStartResponse(BaseModel):
+    folder_id: str
+    case_id: str
+    chunk_size: int
 
 
 class IngestionDocumentModel(BaseModel):
@@ -94,58 +93,20 @@ class IngestionGraphDetailsModel(BaseModel):
     triples: int
 
 
-class AutomationStageModel(BaseModel):
+class IngestionStageDetailModel(BaseModel):
     name: str
-    status: Literal["pending", "running", "succeeded", "failed"]
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    message: Optional[str] = None
-
-
-class LegalFrameworkModel(BaseModel):
-    framework_id: str
-    label: str
-    strategy_brief: "GraphStrategyBriefModel"
-    source_documents: List[str] = Field(default_factory=list)
-    score: Optional[float] = None
-
-
-class AutomationResultsModel(BaseModel):
-    graph: Optional[dict] = None
-    forensics: Optional[dict] = None
-    legal_frameworks: List[LegalFrameworkModel] = Field(default_factory=list)
-    timeline: Optional[dict] = None
-    presentation: Optional[dict] = None
-
-
-class AutomationStatusModel(BaseModel):
-    stages: List[AutomationStageModel] = Field(default_factory=list)
-    results: AutomationResultsModel = Field(default_factory=AutomationResultsModel)
-
-
-class AutomationPipelineRunRequest(BaseModel):
-    stages: List[Literal["graph", "forensics", "legal_theory", "timeline", "presentation"]] = Field(
-        default_factory=list
-    )
-    question: Optional[str] = None
-    case_id: Optional[str] = None
-    autonomy_level: Literal["manual", "balanced", "autonomous"] = Field(default="balanced")
-    force: bool = Field(default=False, description="Re-run stages even if already completed.")
-
-
-class AutomationPipelineResponse(BaseModel):
-    job_id: str
-    stages: List[AutomationStageModel]
-    results: AutomationResultsModel
-
+    status: str
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    warnings: List[str] = Field(default_factory=list)
 
 
 class IngestionStatusDetailsModel(BaseModel):
+    stages: List[IngestionStageDetailModel] = Field(default_factory=list)
     ingestion: IngestionIngestionDetailsModel
     timeline: IngestionTimelineDetailsModel
     forensics: IngestionForensicsDetailsModel
     graph: IngestionGraphDetailsModel
-    automation: Optional["AutomationStatusModel"] = None
 
 
 class IngestionStatusResponse(BaseModel):
@@ -234,39 +195,6 @@ class TimelinePaginationModel(BaseModel):
     has_more: bool
 
 
-class TimelineExportRequestModel(BaseModel):
-    format: Literal["md", "pdf", "xlsx", "html"]
-    case_id: Optional[str] = None
-    entity: Optional[str] = None
-    from_ts: Optional[datetime] = None
-    to_ts: Optional[datetime] = None
-    risk_band: Optional[str] = None
-    motion_due_before: Optional[datetime] = None
-    motion_due_after: Optional[datetime] = None
-    storyboard: bool = False
-
-
-class TimelineExportResponseModel(BaseModel):
-    export_id: str
-    format: Literal["md", "pdf", "xlsx", "html"]
-    filename: str
-    download_url: str
-    created_at: str
-
-
-class StoryboardSceneModel(BaseModel):
-    id: str
-    title: str
-    narrative: str
-    citations: List[str] = Field(default_factory=list)
-    visual_prompt: Optional[str] = None
-
-
-class StoryboardResponseModel(BaseModel):
-    generated_at: str
-    scenes: List[StoryboardSceneModel]
-
-
 class GraphNodeModel(BaseModel):
     id: str
     type: str
@@ -324,10 +252,6 @@ class GraphStrategyBriefModel(BaseModel):
 class GraphNeighborResponse(BaseModel):
     nodes: List[GraphNodeModel]
     edges: List[GraphEdgeModel]
-
-
-class GraphSearchResponse(BaseModel):
-    nodes: List[GraphNodeModel]
 
 
 class ForensicsStageModel(BaseModel):
@@ -620,10 +544,6 @@ class SandboxCommandResultModel(BaseModel):
     stdout: str
     stderr: str
     duration_ms: float
-
-
-class SandboxCommandRequestModel(BaseModel):
-    command: List[str]
 
 
 class SandboxExecutionModel(BaseModel):
@@ -953,10 +873,6 @@ class ModelCatalogResponse(BaseModel):
     providers: List[ProviderCatalogEntryModel]
 
 
-class SettingsModelRefreshRequest(BaseModel):
-    provider_id: str
-
-
 class ProviderSettingsSnapshotModel(BaseModel):
     primary: str
     secondary: Optional[str]
@@ -987,60 +903,6 @@ class SettingsResponse(BaseModel):
     updated_at: Optional[datetime]
 
 
-class CourtProviderStatusEntry(BaseModel):
-    provider_id: str
-    ready: bool
-    reason: Optional[str] = None
-
-
-class CourtProviderStatusResponse(BaseModel):
-    providers: List[CourtProviderStatusEntry]
-
-
-class CourtSearchRequest(BaseModel):
-    provider_id: str
-    query: str
-    jurisdiction: Optional[str] = None
-    limit: int = 10
-    filters: Optional[Dict[str, Any]] = None
-
-
-class CourtSearchResponse(BaseModel):
-    results: List[Dict[str, Any]]
-
-
-class CourtDocumentFetchRequest(BaseModel):
-    provider_id: str
-    case_id: str
-    docket_id: Optional[str] = None
-    document_id: str
-    paid: bool = False
-    amount_estimate: Optional[float] = None
-    currency: str = "USD"
-    requested_by: Optional[str] = None
-
-
-class CourtDocumentFetchResponse(BaseModel):
-    status: str
-    ledger_id: Optional[str] = None
-    document: Optional[Dict[str, Any]] = None
-
-
-class CourtPaymentAuthorizeRequest(BaseModel):
-    provider_id: str
-    case_id: str
-    docket_id: Optional[str] = None
-    document_id: Optional[str] = None
-    amount_actual: Optional[float] = None
-    currency: str = "USD"
-    authorized_by: Optional[str] = None
-    ledger_id: Optional[str] = None
-
-
-class CourtPaymentAuthorizeResponse(BaseModel):
-    status: str
-
-
 class ProviderSettingsUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1056,10 +918,6 @@ class CredentialSettingsUpdate(BaseModel):
 
     provider_api_keys: Optional[Dict[str, Optional[str]]] = None
     courtlistener_token: Optional[str] = None
-    pacer_api_key: Optional[str] = None
-    unicourt_api_key: Optional[str] = None
-    lacs_api_key: Optional[str] = None
-    caselaw_api_key: Optional[str] = None
     research_browser_api_key: Optional[str] = None
 
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { buildApiUrl } from '@/config';
+import { fetchFromApi, parseJsonResponse } from '@/apiClient';
 
 interface ServiceRequest {
   id: string;
@@ -9,23 +9,53 @@ interface ServiceRequest {
   status: 'Pending' | 'Served' | 'Failed';
 }
 
+const DEMO_SERVICE_REQUESTS: ServiceRequest[] = [
+  {
+    id: 'demo-1',
+    documentName: 'Summons & Complaint - Exhibit A',
+    recipient: 'Acme Process Service',
+    status: 'Pending',
+  },
+  {
+    id: 'demo-2',
+    documentName: 'Notice of Hearing - Motion to Compel',
+    recipient: 'Metro Legal Couriers',
+    status: 'Served',
+  },
+  {
+    id: 'demo-3',
+    documentName: 'Subpoena Duces Tecum',
+    recipient: 'North County Sheriff',
+    status: 'Failed',
+  },
+];
+
+const isNonJsonResponse = (err: unknown) =>
+  err instanceof Error && err.message.toLowerCase().includes('unexpected response');
+
 export default function ServiceOfProcessPage() {
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [newRequest, setNewRequest] = useState({ documentName: '', recipient: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [demoMode, setDemoMode] = useState(false);
 
   const fetchServiceRequests = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(buildApiUrl('/api/service-of-process'));
+      const response = await fetchFromApi('/api/service-of-process');
       if (!response.ok) {
         throw new Error(`Failed to fetch service requests: ${response.statusText}`);
       }
-      const data = await response.json();
-      setServiceRequests(data);
+      const data = await parseJsonResponse<ServiceRequest[]>(response, 'Service requests');
+      setServiceRequests(Array.isArray(data) ? data : []);
     } catch (err: any) {
+      if (isNonJsonResponse(err)) {
+        setDemoMode(true);
+        setServiceRequests(DEMO_SERVICE_REQUESTS);
+        return;
+      }
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -41,7 +71,7 @@ export default function ServiceOfProcessPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch(buildApiUrl('/api/service-of-process'), {
+        const response = await fetchFromApi('/api/service-of-process', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -54,6 +84,20 @@ export default function ServiceOfProcessPage() {
         setNewRequest({ documentName: '', recipient: '' });
         fetchServiceRequests();
       } catch (err: any) {
+        if (isNonJsonResponse(err)) {
+          setDemoMode(true);
+          setServiceRequests((prev) => [
+            ...prev,
+            {
+              id: `demo-${Date.now()}`,
+              documentName: newRequest.documentName,
+              recipient: newRequest.recipient,
+              status: 'Pending',
+            },
+          ]);
+          setNewRequest({ documentName: '', recipient: '' });
+          return;
+        }
         setError(err.message);
       } finally {
         setIsLoading(false);
@@ -77,6 +121,11 @@ export default function ServiceOfProcessPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2">
               <h3 className="text-lg font-semibold">Service Requests</h3>
+              {demoMode && (
+                <p className="text-xs uppercase tracking-[0.4em] text-accent-gold mt-2">
+                  Demo service requests (offline)
+                </p>
+              )}
               {isLoading && <p>Loading...</p>}
               {error && <p className="text-red-500 text-sm mt-2">Error: {error}</p>}
               <ul className="mt-4 space-y-4">

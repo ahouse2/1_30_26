@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import { resolveConfig } from './vite.resolve';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -9,11 +9,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __API_BASE__: JSON.stringify(env.VITE_API_BASE_URL || ''),
     },
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, 'src'),
-      },
-    },
+    resolve: resolveConfig,
     server: {
       port: Number(env.VITE_DEV_SERVER_PORT || 5173),
       host: true,
@@ -27,6 +23,7 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: './tests/setup.ts',
       css: true,
+      exclude: ['**/node_modules/**', '**/dist/**', '**/._*'],
     },
   };
 });

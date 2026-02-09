@@ -1,9 +1,11 @@
 import axios from 'axios';
-import { buildApiUrl } from '@/config';
+
+const API_BASE_URL = '/api/documents'; // Adjust if your API is hosted elsewhere
 
 interface UploadDocumentResponse {
   message: string;
   data: {
+    job_id: string;
     doc_id: string;
     version: string;
     case_id: string;
@@ -17,62 +19,23 @@ interface UploadDocumentResponse {
 export const uploadDocument = async (
   caseId: string,
   docType: 'my_documents' | 'opposition_documents',
-  file: File
+  file: File,
+  onUploadProgress?: (progress: number) => void
 ): Promise<UploadDocumentResponse> => {
   const formData = new FormData();
   formData.append('case_id', caseId);
   formData.append('doc_type', docType);
   formData.append('file', file);
 
-  const response = await axios.post<UploadDocumentResponse>(buildApiUrl('/upload'), formData, {
+  const response = await axios.post<UploadDocumentResponse>(`${API_BASE_URL}/upload`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
-  });
-  return response.data;
-};
-
-interface AutomationStageStatus {
-  name: string;
-  status: 'pending' | 'running' | 'succeeded' | 'failed';
-  started_at?: string | null;
-  completed_at?: string | null;
-  message?: string | null;
-}
-
-interface FolderAutomationResponse {
-  job_id: string;
-  stages: AutomationStageStatus[];
-  results: Record<string, unknown>;
-}
-
-export const uploadFolder = async (payload: {
-  caseId: string;
-  files: File[];
-  question?: string;
-  stages?: string[];
-  autoRun?: boolean;
-  autonomyLevel?: string;
-}): Promise<FolderAutomationResponse> => {
-  const formData = new FormData();
-  formData.append('case_id', payload.caseId);
-  formData.append('auto_run', String(payload.autoRun ?? true));
-  formData.append('autonomy_level', payload.autonomyLevel ?? 'balanced');
-  if (payload.question) {
-    formData.append('question', payload.question);
-  }
-  if (payload.stages && payload.stages.length > 0) {
-    payload.stages.forEach((stage) => formData.append('stages', stage));
-  }
-  payload.files.forEach((file) => {
-    formData.append('files', file);
-    const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
-    formData.append('relative_paths', relativePath && relativePath.length > 0 ? relativePath : file.name);
-  });
-
-  const response = await axios.post<FolderAutomationResponse>(buildApiUrl('/automation/ingest-folder'), formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
+    onUploadProgress: (event) => {
+      if (!onUploadProgress) return;
+      const total = event.total || event.loaded;
+      const progress = total ? Math.round((event.loaded / total) * 100) : 0;
+      onUploadProgress(progress);
     },
   });
   return response.data;
@@ -89,10 +52,7 @@ export const getDocument = async (
   version?: string
 ): Promise<DocumentContentResponse> => {
   const params = version ? { version } : {};
-  const response = await axios.get<DocumentContentResponse>(
-    buildApiUrl(`/${caseId}/${docType}/${docId}`),
-    { params }
-  );
+  const response = await axios.get<DocumentContentResponse>(`${API_BASE_URL}/${caseId}/${docType}/${docId}`, { params });
   return response.data;
 };
 
@@ -105,7 +65,7 @@ export const listDocumentVersions = async (
   docType: 'my_documents' | 'opposition_documents',
   docId: string
 ): Promise<string[]> => {
-  const response = await axios.get<string[]>(buildApiUrl(`/${caseId}/${docType}/${docId}/versions`));
+  const response = await axios.get<string[]>(`${API_BASE_URL}/${caseId}/${docType}/${docId}/versions`);
   return response.data;
 };
 
@@ -116,9 +76,53 @@ export const deleteDocument = async (
   version?: string
 ): Promise<{ message: string }> => {
   const params = version ? { version } : {};
-  const response = await axios.delete<{ message: string }>(
-    buildApiUrl(`/${caseId}/${docType}/${docId}`),
-    { params }
-  );
+  const response = await axios.delete<{ message: string }>(`${API_BASE_URL}/${caseId}/${docType}/${docId}`, { params });
+  return response.data;
+};
+
+export interface IngestionStatusResponse {
+  job_id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+  submitted_at: string;
+  updated_at: string;
+  documents: Array<{
+    id: string;
+    uri?: string;
+    type: string;
+    title: string;
+    metadata: Record<string, unknown>;
+  }>;
+  errors: Array<{
+    code: string;
+    message: string;
+    source?: string;
+  }>;
+  status_details: {
+    ingestion: { documents: number; skipped: Array<Record<string, unknown>> };
+    timeline: { events: number };
+    forensics: { artifacts: Array<Record<string, unknown>>; last_run_at?: string | null };
+    graph: { nodes: number; edges: number; triples: number };
+  };
+}
+
+export const getIngestionStatus = async (jobId: string): Promise<IngestionStatusResponse> => {
+  const response = await axios.get<IngestionStatusResponse>(`/api/ingestion/${jobId}/status`);
+  return response.data;
+};
+
+export interface FolderUploadStartResponse {
+  folder_id: string;
+  case_id: string;
+  chunk_size: number;
+}
+
+export const startFolderUpload = async (
+  folderName: string,
+  docType: 'my_documents' | 'opposition_documents'
+): Promise<FolderUploadStartResponse> => {
+  const response = await axios.post<FolderUploadStartResponse>('/api/ingestion/folder/start', {
+    folder_name: folderName,
+    doc_type: docType,
+  });
   return response.data;
 };

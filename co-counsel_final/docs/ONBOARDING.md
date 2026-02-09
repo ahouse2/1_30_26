@@ -1,9 +1,9 @@
 # Onboarding Guide — NinthOctopusMitten
 
 ## 1) Project Overview
-- Purpose: Build an AI legal discovery co-counsel (GraphRAG + Swarms orchestration) with strong documentation and validation via PRPs.
-- Stack: Python (agents/backends), Neo4j, Qdrant/Chroma, React (UI), Whisper/Coqui (voice), LlamaIndex + LlamaHub, Swarms. LLM Provider default: Google Gemini‑2.5‑Flash; optional OpenAI GPT‑5.0.
-- Architecture: Service-style backend + Swarms workflow graph; vector + graph storage; web UI. PRP-driven development.
+- Purpose: Integrate reference agent frameworks to build an AI legal discovery co-counsel (GraphRAG + multi-agent orchestration) with strong documentation and validation via PRPs.
+- Stack: Python (agents/backends), Neo4j, Qdrant/Chroma, React (UI), Whisper/Coqui (voice), Swarms, LlamaIndex + LlamaHub. LLM Provider default: Google Gemini‑2.5‑Flash; optional OpenAI GPT‑5.0.
+- Architecture: Service-style backend + agent workflow graph; vector + graph storage; web UI. PRP-driven development with Swarms orchestration.
 
 ## 2) Repository Structure
 - `AgentsMD_PRPs_and_AgentMemory/` — PRPs, guides, and agent process docs
@@ -18,7 +18,7 @@ Prerequisites
 - Python 3.11+, Node 18+, Docker + Docker Compose, Neo4j 5.x (container), optional Qdrant/Chroma
 
 Environment
-- Create `.env` with: `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `VECTOR_BACKEND=qdrant`, `QDRANT_URL`
+- Create `.env` with: `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `VECTOR_DIR=./storage/vector`
 
 Install (suggested commands)
 - Backend Python stack:
@@ -37,24 +37,26 @@ Reference SDK acquisition
    ```
 3. (Optional) Clone a single dependency manually if the automation cannot reach GitHub:
    ```bash
+   git clone --depth 1 --branch v0.2.27 https://github.com/microsoft/autogen.git "Reference Code/vendor/agent-framework-main"
    git clone --depth 1 https://github.com/run-llama/llama-hub.git "Reference Code/vendor/llama-hub"
    git clone --depth 1 https://github.com/kyegomez/swarms.git "Reference Code/vendor/swarms-master"
    ```
 4. Confirm `Reference Code/vendor/` is excluded from Git (see `Reference Code/.gitignore`).
 
 Run
-- Use Docker Compose to bring up api, Neo4j, Qdrant, and frontend
+- Use Docker Compose (to be added) to bring up api, Neo4j, and vector DB
 - Python quality gates (mirrors CI):
   - `ruff check backend`
   - `mypy --config-file mypy.ini backend`
   - `PYTHONPATH=. pytest backend/tests -q --cov=backend/app --cov-report=xml --cov-report=html`
 - Coverage artifacts land in `coverage.xml` and `htmlcov/` (uploaded by CI for inspection).
 - Forensics artifacts output to `./storage/forensics/{fileId}/` once implemented
+- Folder ingestion uses resumable, chunked uploads and auto-creates cases; manual stage triggers allow re-running pipeline stages on demand.
 
 ## 4) Key Components
 - PRPs: see `AgentsMD_PRPs_and_AgentMemory/PRPs/*` — base, planning, spec, tasks
 - Rebuilt TRD/PRP: `AgentsMD_PRPs_and_AgentMemory/PRPs/ai_docs/TRD-PRP_legal_tech_2_rebuilt_msagents_llamaindex_swarms.md`
-- Reference SDKs: `Reference Code/swarms`, `Reference Code/llama-hub`, `swarms-master/`
+- Reference SDKs: `Reference Code/agent-framework-main`, `Reference Code/llama-hub`, `swarms-master/`
 - Dev Team console: open the “Dev Team” workspace section to review `/dev-agent/proposals` backlog, inspect sandbox validation output, and approve proposals (requires `dev-agent:admin` scope or PlatformEngineer/AutomationService roles).
 
 ## 5) Dev Workflow
@@ -63,13 +65,14 @@ Run
 - Backend CI (`.github/workflows/backend_ci.yml`) runs on pushes/PRs touching backend tooling; it bootstraps via `scripts/bootstrap_backend.sh`, caches heavy wheels (pandas/scikit-learn) using uv/pip caches, runs lint/type/test suites, and publishes coverage + pytest artefacts to the PR.
 
 ## 6) Architecture Decisions
-- Local-first RAG; GraphRAG via Neo4j; Swarms for workflow and roles
+- Local-first RAG; GraphRAG via Neo4j; Swarms for workflow + role orchestration
 - Cite-or-silence policy; persistent telemetry
 
 ## 7) Common Tasks
 - Add loader: register LlamaHub reader, update ingestion config
 - Add graph relation: extend ontology + Cypher upserts
 - Add endpoint: extend API spec under PRP Spec doc
+- Manual stage trigger: call `/api/ingestion/{job_id}/stage/{stage}/run` with `{ "resume_downstream": true }`
 
 ## 8) Gotchas
 - `.gitattributes` corruption — clean before committing media changes

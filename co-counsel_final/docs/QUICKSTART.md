@@ -6,33 +6,36 @@
 ## Setup
 1) Create `.env`
 ```
-NEO4J_URI=neo4j://localhost:7687
+NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=securepassword
-VECTOR_BACKEND=qdrant
-QDRANT_URL=http://localhost:6333
+VECTOR_DIR=./storage/vector
+ENCRYPTION_KEY=base64-url-safe-32-byte-key
+INGESTION_WORKSPACE_DIR=./storage/workspaces
+PROVIDER=gemini
 GEMINI_API_KEY=...
 # Or OpenAI
-OPENAI_API_KEY=...
+# PROVIDER=openai
+# OPENAI_API_KEY=...
 ```
-2) Configure providers in Settings UI
-- Set API keys and base URLs for OpenAI, Gemini, OpenRouter, LocalAI, LM Studio, Ollama, and Hugging Face.
-- Use the "Refresh models" button to pull model lists from each provider.
-3) Start services:
+2) Start services (to be added):
 ```
-# Dev (Vite frontend)
-docker compose --profile dev up -d
-
-# Prod (full-featured stack: telemetry + voice + backups)
-docker compose --profile prod up -d
+docker compose up -d
 ```
-4) Open UI
-- Dev: http://localhost:5173
-- Prod: http://localhost
+3) Run backend locally (once scaffolded)
+```
+uv run python -m api
+```
+4) Open UI (once scaffolded)
+```
+npm run dev
+```
 
 ## Validate
-- Hit `GET /health` (if enabled)
-- Ingest sample corpus via `POST /ingest`
-- Run workflow via `POST /workflow/run`
+- Hit `GET /health` (when implemented)
+- Upload a document via `POST /api/documents/upload` (multipart form: `case_id`, `doc_type`, `file`)
+- Start a folder upload via `POST /api/ingestion/folder/start` with `{ "folder_name": "...", "doc_type": "my_documents" }`
+- Poll ingestion status via `GET /api/ingestion/{job_id}/status`
+- Manually run a stage via `POST /api/ingestion/{job_id}/stage/{stage}/run` with `{ "resume_downstream": true }`
 - Ask a question via `GET /query?q=...` and verify citations
-- Retrieve forensics reports via `/forensics/...` endpoints
+- Retrieve forensics reports via `/forensics/document?id=...` and `/forensics/image?id=...`
