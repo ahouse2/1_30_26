@@ -27,6 +27,11 @@ class FolderUploadStartRequest(BaseModel):
     doc_type: Literal["my_documents", "opposition_documents"]
 
 
+class FileUploadStartRequest(BaseModel):
+    relative_path: str
+    total_bytes: int
+
+
 class StageRunRequest(BaseModel):
     resume_downstream: bool = Field(default=False)
 
@@ -42,6 +47,25 @@ class UploadStartResponse(BaseModel):
     upload_id: str
     case_id: str
     chunk_size: int
+
+
+class FileUploadStartResponse(BaseModel):
+    upload_id: str
+    chunk_size: int
+    folder_id: str
+    case_id: str | None = None
+    relative_path: str
+
+
+class FileUploadChunkResponse(BaseModel):
+    upload_id: str
+    chunk_index: int
+
+
+class FileUploadCompleteResponse(BaseModel):
+    upload_id: str
+    relative_path: str
+    final_path: str
 
 
 class FolderUploadStartResponse(BaseModel):

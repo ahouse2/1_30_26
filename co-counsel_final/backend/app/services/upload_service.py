@@ -49,6 +49,7 @@ class UploadService:
         folder_dir = self._folder_dir(folder_id)
         if not folder_dir.exists():
             raise FileNotFoundError(f"Folder session {folder_id} not found")
+        folder_payload = self.get_folder_payload(folder_id)
         safe_relative = self._sanitize_relative_path(relative_path)
         upload_id = uuid4().hex
         chunk_dir = folder_dir / "chunks" / upload_id
@@ -65,7 +66,13 @@ class UploadService:
             "received_chunks": [],
         }
         atomic_write_json(self._upload_session_path(upload_id), session_payload)
-        return {"upload_id": upload_id, "chunk_size": self.chunk_size}
+        return {
+            "upload_id": upload_id,
+            "chunk_size": self.chunk_size,
+            "folder_id": folder_id,
+            "case_id": folder_payload.get("case_id"),
+            "relative_path": str(safe_relative),
+        }
 
     def append_chunk(self, upload_id: str, chunk_index: int, data: bytes) -> None:
         session = self._read_upload_session(upload_id)
@@ -85,7 +92,30 @@ class UploadService:
         with final_path.open("wb") as handle:
             for chunk in chunks:
                 handle.write(chunk.read_bytes())
+        folder_id = session.get("folder_id")
+        if folder_id:
+            folder_payload = self.get_folder_payload(folder_id)
+            folder_payload.setdefault("files", [])
+            folder_payload["files"].append(
+                {
+                    "upload_id": upload_id,
+                    "relative_path": session["relative_path"],
+                    "final_path": str(final_path),
+                    "total_bytes": session.get("total_bytes"),
+                }
+            )
+            atomic_write_json(self._folder_dir(folder_id) / "folder.json", folder_payload)
         return {"upload_id": upload_id, "relative_path": session["relative_path"], "final_path": str(final_path)}
+
+    def get_folder_payload(self, folder_id: str) -> Dict[str, Any]:
+        folder_dir = self._folder_dir(folder_id)
+        payload_path = folder_dir / "folder.json"
+        if not payload_path.exists():
+            raise FileNotFoundError(f"Folder session {folder_id} not found")
+        return read_json(payload_path)
+
+    def get_folder_files_dir(self, folder_id: str) -> Path:
+        return self._folder_dir(folder_id) / "files"
 
     def _folder_dir(self, folder_id: str) -> Path:
         safe_folder = sanitise_identifier(folder_id)
