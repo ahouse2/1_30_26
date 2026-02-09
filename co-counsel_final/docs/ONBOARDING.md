@@ -73,6 +73,7 @@ Run
 - Add graph relation: extend ontology + Cypher upserts
 - Add endpoint: extend API spec under PRP Spec doc
 - Manual stage trigger: call `/api/ingestion/{job_id}/stage/{stage}/run` with `{ "resume_downstream": true }`
+- Chunked folder uploads: `/api/ingestion/folder/start` → `/file/start` → `/file/{upload_id}/chunk` → `/file/{upload_id}/complete` → `/folder/{folder_id}/complete`
 
 ## 8) Gotchas
 - `.gitattributes` corruption — clean before committing media changes

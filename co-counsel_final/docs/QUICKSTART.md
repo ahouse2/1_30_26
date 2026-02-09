@@ -35,6 +35,9 @@ npm run dev
 - Hit `GET /health` (when implemented)
 - Upload a document via `POST /api/documents/upload` (multipart form: `case_id`, `doc_type`, `file`)
 - Start a folder upload via `POST /api/ingestion/folder/start` with `{ "folder_name": "...", "doc_type": "my_documents" }`
+- Start each file upload via `POST /api/ingestion/folder/{folder_id}/file/start`
+- Stream chunks via `POST /api/ingestion/file/{upload_id}/chunk`, then `POST /api/ingestion/file/{upload_id}/complete`
+- Finalize the folder via `POST /api/ingestion/folder/{folder_id}/complete` to enqueue ingestion
 - Poll ingestion status via `GET /api/ingestion/{job_id}/status`
 - Manually run a stage via `POST /api/ingestion/{job_id}/stage/{stage}/run` with `{ "resume_downstream": true }`
 - Ask a question via `GET /query?q=...` and verify citations

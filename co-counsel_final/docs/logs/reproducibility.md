@@ -27,3 +27,11 @@
   - `PYTHONPATH=/Volumes/MAC_DEV/REPOS/co-counsel_final/tools:/Volumes/MAC_DEV/REPOS/co-counsel_final pytest backend/tests/test_ingestion_stage_api.py -q`
   - `PYTHONPATH=/Volumes/MAC_DEV/REPOS/co-counsel_final/tools:/Volumes/MAC_DEV/REPOS/co-counsel_final pytest backend/tests/test_ingestion_status_details.py -q`
   - `cd frontend && npx vitest run tests/documentApiUpload.test.ts tests/folderUploadZone.test.tsx tests/ingestionPipelinePanel.test.tsx tests/uploadEvidencePage.test.tsx`
+
+## 2026-02-09 (Chunked Upload Wiring)
+- Added chunked file upload endpoints: start file, append chunk, complete file, complete folder.
+- Upload service now records uploaded files and exposes folder payload + files dir.
+- UI now performs chunked folder uploads end-to-end and auto-enqueues ingestion on completion.
+- Tests:
+  - `PYTHONPATH=/Volumes/MAC_DEV/REPOS/2-4-26_tree/co-counsel_final/tools:/Volumes/MAC_DEV/REPOS/2-4-26_tree/co-counsel_final pytest backend/tests/test_ingestion_upload_api.py backend/tests/test_upload_service.py -q`
+  - `cd frontend && npx vitest run tests/documentApiUpload.test.ts tests/uploadEvidencePage.test.tsx`
