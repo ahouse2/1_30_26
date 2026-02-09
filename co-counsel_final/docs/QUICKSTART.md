@@ -18,9 +18,13 @@ GEMINI_API_KEY=...
 # PROVIDER=openai
 # OPENAI_API_KEY=...
 ```
-2) Start services (to be added):
+2) Start services (one-click prod):
 ```
-docker compose up -d
+./scripts/run-prod.sh
+```
+Optional flags:
+```
+./scripts/run-prod.sh --no-seed --data-dir "/path/to/case-data" --e2e
 ```
 3) Run backend locally (once scaffolded)
 ```
