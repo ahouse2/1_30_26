@@ -22,6 +22,11 @@ class IngestionTextRequest(BaseModel):
     text: str
 
 
+class FolderUploadStartRequest(BaseModel):
+    folder_name: str
+    doc_type: Literal["my_documents", "opposition_documents"]
+
+
 class IngestionResponse(BaseModel):
     job_id: str = Field(description="Identifier tracking the ingestion operation")
     status: Literal["queued", "running", "succeeded", "failed", "cancelled"] = Field(
