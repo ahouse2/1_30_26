@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     encryption_key: str = Field(default="a_very_secret_key_for_document_encryption_32_bytes_long", min_length=32) # Added
     document_storage_path: Path = Field(default=Path("storage/documents")) # Renamed from document_store_dir for clarity
     ingestion_workspace_dir: Path = Field(default=Path("storage/workspaces"))
+    upload_workspace_dir: Path = Field(default=Path("storage/uploads"))
+    upload_chunk_size_bytes: int = Field(default=8 * 1024 * 1024, ge=1024)
     workflow_storage_path: Path = Field(default=Path("storage/workflows"))
     agent_threads_dir: Path = Field(default=Path("storage/agent_threads"))
     agent_retry_attempts: int = Field(default=3, ge=1)
