@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import os
 from pathlib import Path
 from typing import Dict, Literal, Optional
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -54,8 +55,13 @@ class Settings(BaseSettings):
     timeline_path: Path = Field(default=Path("storage/timeline.jsonl"))
     job_store_dir: Path = Field(default=Path("storage/jobs"))
     encryption_key: str = Field(default="a_very_secret_key_for_document_encryption_32_bytes_long", min_length=32) # Added
-    document_storage_path: Path = Field(default=Path("storage/documents")) # Renamed from document_store_dir for clarity
+    document_storage_path: Path = Field(
+        default=Path("storage/documents"),
+        validation_alias=AliasChoices("DOCUMENT_STORAGE_PATH", "DOCUMENT_STORE_DIR"),
+    ) # Renamed from document_store_dir for clarity
     ingestion_workspace_dir: Path = Field(default=Path("storage/workspaces"))
+    upload_workspace_dir: Path = Field(default=Path("storage/uploads"))
+    upload_chunk_size_bytes: int = Field(default=8 * 1024 * 1024, ge=1024)
     agent_threads_dir: Path = Field(default=Path("storage/agent_threads"))
     agent_retry_attempts: int = Field(default=3, ge=1)
     agent_retry_backoff_ms: int = Field(default=0, ge=0)
@@ -64,6 +70,8 @@ class Settings(BaseSettings):
     agent_circuit_cooldown_seconds: float = Field(default=45.0, ge=1.0)
     agent_default_autonomy: Literal["low", "balanced", "high"] = Field(default="balanced")
     agent_max_turns: int = Field(default=12, ge=5, le=40)
+    swarms_router_model: str = Field(default="")
+    swarms_router_temperature: float = Field(default=0.1, ge=0.0, le=2.0)
     agents_policy_enabled: bool = Field(default=True)
     agents_policy_initial_trust: float = Field(default=0.6, ge=0.0, le=2.0)
     agents_policy_trust_threshold: float = Field(default=0.35, ge=0.0, le=1.5)
@@ -261,6 +269,10 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         protected_namespaces=(),
     )
+
+    @property
+    def document_store_dir(self) -> Path:
+        return self.document_storage_path
 
     def prepare_directories(self) -> None:
         self.vector_dir.mkdir(parents=True, exist_ok=True)
