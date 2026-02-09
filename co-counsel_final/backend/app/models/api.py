@@ -10,10 +10,16 @@ class IngestionSource(BaseModel):
     type: str = Field(description="Source type identifier")
     path: Optional[str] = Field(default=None, description="Filesystem path for local sources")
     credRef: Optional[str] = Field(default=None, description="Credential reference for remote sources")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Optional source metadata")
 
 
 class IngestionRequest(BaseModel):
     sources: List[IngestionSource]
+
+
+class IngestionTextRequest(BaseModel):
+    document_id: str
+    text: str
 
 
 class IngestionResponse(BaseModel):
@@ -21,6 +27,18 @@ class IngestionResponse(BaseModel):
     status: Literal["queued", "running", "succeeded", "failed", "cancelled"] = Field(
         description="Current job status"
     )
+
+
+class UploadStartResponse(BaseModel):
+    upload_id: str
+    case_id: str
+    chunk_size: int
+
+
+class FolderUploadStartResponse(BaseModel):
+    folder_id: str
+    case_id: str
+    chunk_size: int
 
 
 class IngestionDocumentModel(BaseModel):
@@ -897,4 +915,3 @@ class SettingsUpdateRequest(BaseModel):
     providers: Optional[ProviderSettingsUpdate] = None
     credentials: Optional[CredentialSettingsUpdate] = None
     appearance: Optional[AppearanceSettingsUpdate] = None
-
