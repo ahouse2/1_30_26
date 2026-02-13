@@ -356,7 +356,6 @@ export function SettingsPanel(): JSX.Element {
             );
           })}
         </div>
-        </div>
         <div className="form-actions">
           <button type="submit" disabled={saving}>
             Save provider preferences
