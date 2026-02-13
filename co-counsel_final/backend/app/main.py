@@ -41,6 +41,7 @@ def _include_optional_router(module_name: str, *, prefix: str | None = None, tag
 
 _include_optional_router("health")
 _include_optional_router("parity")
+_include_optional_router("compat")
 _include_optional_router("voice")
 _include_optional_router("courts")
 
