@@ -8,16 +8,10 @@ import {
   getCryptoTracing,
   getForensicAnalysis,
 } from '@/services/forensics_api';
-import { CryptoGraphViewer } from '@/components/CryptoGraphViewer';
-
-interface ForensicsReportPageParams {
-  caseId: string;
-  docType: string;
-  docId: string;
-}
+import CryptoGraphViewer from '@/components/CryptoGraphViewer';
 
 const ForensicsReportPage: React.FC = () => {
-  const { caseId, docType, docId } = useParams<ForensicsReportPageParams>();
+  const { caseId, docType, docId } = useParams<'caseId' | 'docType' | 'docId'>();
   const [forensicResults, setForensicResults] = useState<ForensicsResponse | null>(null);
   const [cryptoTracingResults, setCryptoTracingResults] = useState<CryptoTracingResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);

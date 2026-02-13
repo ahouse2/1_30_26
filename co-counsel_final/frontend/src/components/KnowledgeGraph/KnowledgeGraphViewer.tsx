@@ -59,7 +59,8 @@ const KnowledgeGraphViewer: React.FC = () => {
       network.on("click", (properties) => {
         if (properties.nodes.length > 0) {
           const nodeId = properties.nodes[0];
-          const clickedNode = nodes.get(nodeId) as GraphNode;
+          const selected = nodes.get(nodeId);
+          const clickedNode = Array.isArray(selected) ? selected[0] : selected;
           if (clickedNode) {
             toast({
               title: `Node: ${clickedNode.label}`,

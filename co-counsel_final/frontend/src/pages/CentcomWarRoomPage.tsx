@@ -16,7 +16,7 @@ import {
   GraphRefinementStatus,
 } from '@/services/graph_refinement_api';
 import { fetchCourtProviderStatus, fetchCourtSyncStatus, searchCourtRecords } from '@/services/courts_api';
-import { CourtProviderStatusEntry, CourtSyncStatusPayload, TimelineEvent } from '@/types';
+import { CourtProviderStatusEntry, CourtSearchResultItem, CourtSyncStatusPayload, TimelineEvent } from '@/types';
 import { fetchTimeline } from '@/utils/apiClient';
 import { useSharedCaseId } from '@/hooks/useSharedCaseId';
 
@@ -149,7 +149,7 @@ export default function CentcomWarRoomPage() {
   const [courtSearchJurisdiction, setCourtSearchJurisdiction] = useState('CA');
   const [courtSearchLoading, setCourtSearchLoading] = useState(false);
   const [courtSearchError, setCourtSearchError] = useState<string | null>(null);
-  const [courtSearchResults, setCourtSearchResults] = useState<Array<Record<string, unknown>>>([]);
+  const [courtSearchResults, setCourtSearchResults] = useState<CourtSearchResultItem[]>([]);
   const [courtSync, setCourtSync] = useState<CourtSyncStatusPayload | null>(null);
   const cursorRef = useRef(0);
 
@@ -404,7 +404,7 @@ export default function CentcomWarRoomPage() {
     setCourtSearchError(null);
     try {
       const payload = await searchCourtRecords({
-        provider_id: courtSearchProvider,
+        provider: courtSearchProvider,
         query: courtSearchQuery.trim(),
         jurisdiction: courtSearchJurisdiction.trim() || undefined,
         limit: 8,
@@ -756,9 +756,9 @@ export default function CentcomWarRoomPage() {
                 <div className="centcom-court-highlight">
                   <span>Payment queue</span>
                   <strong>
-                    {courtSync.payment_queue.pending} pending · {courtSync.payment_queue.authorized} authorized
+                    {courtSync.payment_queue?.pending ?? 0} pending · {courtSync.payment_queue?.authorized ?? 0} authorized
                   </strong>
-                  <p>Total events: {courtSync.payment_queue.total}</p>
+                  <p>Total events: {courtSync.payment_queue?.total ?? 0}</p>
                 </div>
               )}
               <div className="centcom-court-search">

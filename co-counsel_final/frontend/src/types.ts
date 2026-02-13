@@ -128,6 +128,58 @@ export interface CourtProviderStatusResponse {
   providers: CourtProviderStatusEntry[];
 }
 
+export interface CourtSearchRequestPayload {
+  provider: string;
+  provider_id?: string;
+  query: string;
+  case_id?: string | null;
+  jurisdiction?: string | null;
+  limit?: number;
+}
+
+export interface CourtSearchResultItem {
+  provider: string;
+  title: string;
+  case_id: string;
+  case_name?: string | null;
+  name?: string | null;
+  court?: string | null;
+  jurisdiction?: string | null;
+  docket_number?: string | null;
+  date_filed?: string | null;
+  date?: string | null;
+  excerpt?: string | null;
+  source_url?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CourtSearchResponsePayload {
+  query: string;
+  provider: string;
+  results: CourtSearchResultItem[];
+}
+
+export interface CourtSyncCaseStatus {
+  provider: string;
+  case_id: string;
+  documents_found: number;
+  latest_filed_at?: string | null;
+}
+
+export interface CourtSyncStatusPayload {
+  case_id: string;
+  jurisdiction?: string | null;
+  status: 'idle' | 'running' | 'completed' | 'failed';
+  started_at?: string | null;
+  completed_at?: string | null;
+  payment_queue?: {
+    pending: number;
+    authorized: number;
+    total: number;
+  };
+  cases: CourtSyncCaseStatus[];
+}
+
 export interface OutcomeProbability {
   label: string;
   probability: number;

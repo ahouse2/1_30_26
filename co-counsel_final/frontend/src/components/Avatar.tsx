@@ -1,69 +1,68 @@
-import { Avatar as VisageAvatar } from "@readyplayerme/visage";
-import * as Visage from "@readyplayerme/visage";
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import WaWaLipsync from "wawa-lipsync";
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 
-const modelSrc = "https://models.readyplayer.me/65805362d72a7a816405eca3.glb";
+export interface AvatarHandle {
+  speak: (text: string) => void;
+}
 
-export const Avatar = forwardRef((props, ref) => {
-  const { visage } = Visage.useVisage();
-  const [lipsync, setLipsync] = useState<WaWaLipsync | null>(null);
+export const Avatar = forwardRef<AvatarHandle>((_, ref) => {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [speaking, setSpeaking] = useState(false);
 
-  useEffect(() => {
-    if (visage.head) {
-      const newLipsync = new WaWaLipsync(visage.head);
-      setLipsync(newLipsync);
-    }
-  }, [visage.head]);
-
-  const speak = async (text: string) => {
+  const speak = (text: string) => {
     const audio = audioRef.current;
-
-    if (audio) {
-      const response = await fetch(
-        "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "xi-api-key": process.env.REACT_APP_ELEVENLABS_API_KEY || "",
-          },
-          body: JSON.stringify({
-            text,
-            voice_settings: {
-              stability: 0,
-              similarity_boost: 0,
-            },
-          }),
-        }
-      );
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      audio.src = audioUrl;
-      audio.play();
-
-      if (lipsync) {
-        lipsync.start(audio);
-      }
-
-      audio.onended = () => {
-        if (lipsync) {
-          lipsync.stop();
-        }
-      };
+    if (!audio || !text.trim()) {
+      return;
     }
+    setSpeaking(true);
+    const key = import.meta.env.VITE_ELEVENLABS_API_KEY;
+    const voice = import.meta.env.VITE_ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+    if (!key) {
+      setSpeaking(false);
+      return;
+    }
+    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key': key,
+        },
+        body: JSON.stringify({
+          text,
+          voice_settings: {
+            stability: 0.35,
+            similarity_boost: 0.7,
+          },
+        }),
+      })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Voice synthesis failed (${response.status})`);
+        }
+        return response.blob();
+      })
+      .then((audioBlob) => {
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audio.src = audioUrl;
+        return audio.play().then(() => {
+          audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            setSpeaking(false);
+          };
+        });
+      })
+      .catch(() => {
+        setSpeaking(false);
+      });
   };
 
-  useImperativeHandle(ref, () => ({
-    speak,
-  }));
+  useImperativeHandle(ref, () => ({ speak }));
 
   return (
-    <div className="h-full w-full bg-transparent">
-      <VisageAvatar modelSrc={modelSrc} />
+    <div className="h-full w-full grid place-items-center bg-transparent">
+      <div className={`voice-avatar-orb ${speaking ? 'is-speaking' : ''}`} />
       <audio ref={audioRef} hidden />
     </div>
   );
 });
+
+Avatar.displayName = 'Avatar';

@@ -14,8 +14,7 @@
                             "baseUrl":  "."
                         },
     "include":  [
-                    "src",
-                    "tests"
+                    "src"
                 ],
     "references":  [
                        {
