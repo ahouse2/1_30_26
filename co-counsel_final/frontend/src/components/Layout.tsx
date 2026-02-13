@@ -2,7 +2,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { SettingsPanel } from '@/components/SettingsPanel';
-import { useQueryContext } from '@/context/QueryContext'; // Assuming this context is still needed here
+import { ActiveCaseRail } from '@/components/ActiveCaseRail';
+import { CommandPalette } from '@/components/CommandPalette';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,9 +11,32 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
-  const { queryMode, setQueryMode } = useQueryContext(); // Assuming this context is still needed here
 
   const isActive = (path: string) => location.pathname === path;
+  const navItems = [
+    { to: '/dashboard', icon: 'fa-solid fa-house', label: 'Core', longLabel: 'Dashboard' },
+    { to: '/graph', icon: 'fa-solid fa-diagram-project', label: 'Graph', longLabel: 'Graph Explorer' },
+    { to: '/live-chat', icon: 'fa-solid fa-comments', label: 'Intel', longLabel: 'Live Co-Counsel Chat' },
+    { to: '/timeline', icon: 'fa-solid fa-timeline', label: 'History', longLabel: 'Timeline Builder' },
+    { to: '/upload', icon: 'fa-solid fa-cloud-arrow-up', label: 'Docs', longLabel: 'Upload Evidence' },
+    { to: '/trial-prep', icon: 'fa-solid fa-scale-balanced', label: 'Trial', longLabel: 'Trial Prep Panels' },
+    { to: '/research-strategy', icon: 'fa-solid fa-book-open', label: 'Strategy', longLabel: 'Research & Strategy' },
+    { to: '/in-court-presentation', icon: 'fa-solid fa-landmark', label: 'Court', longLabel: 'Presentation Studio' },
+    { to: '/forensics/exampleCase/opposition_documents/exampleDoc', icon: 'fa-solid fa-magnifying-glass-chart', label: 'Forensics', longLabel: 'Forensics Report' },
+    { to: '/centcom', icon: 'fa-solid fa-tower-observation', label: 'CENTCOM', longLabel: 'CENTCOM' },
+    { to: '/workflow', icon: 'fa-solid fa-diagram-predecessor', label: 'Ops', longLabel: 'Case Workflow' },
+    { to: '/parity-ops', icon: 'fa-solid fa-list-check', label: 'Parity', longLabel: 'Parity Ops' },
+    { to: '/trial-university', icon: 'fa-solid fa-graduation-cap', label: 'Trial U', longLabel: 'Trial University' },
+    { to: '/mock-trial', icon: 'fa-solid fa-gavel', label: 'Arena', longLabel: 'Mock Trial Arena' },
+    { to: '/design-system', icon: 'fa-solid fa-palette', label: 'Theme', longLabel: 'Design System' },
+    { to: '/dev-team', icon: 'fa-solid fa-users-gear', label: 'Dev', longLabel: 'Dev Team' },
+  ] as const;
+  const commandActions = navItems.map((item) => ({
+    id: item.to,
+    label: item.longLabel,
+    description: `Open ${item.label} station`,
+    route: item.to,
+  }));
 
   return (
     <div className="cinematic-app">
@@ -23,11 +47,19 @@ export function Layout({ children }: LayoutProps) {
             <i className="fa-solid fa-gavel" />
           </div>
           <div>
-            <p className="eyebrow">Co-Counsel</p>
-            <h1>AI Legal Discovery</h1>
+            <p className="eyebrow">System Core v4.0</p>
+            <h1>Consolidated Legal Command Hub</h1>
           </div>
         </div>
         <div className="header-actions">
+          <button
+            type="button"
+            className="btn-cinematic header-command-trigger"
+            onClick={() => window.dispatchEvent(new Event('co-counsel:open-command-palette'))}
+          >
+            Command
+            <kbd>Ctrl/⌘ K</kbd>
+          </button>
           <ThemeToggle />
           <SettingsPanel />
         </div>
@@ -36,133 +68,43 @@ export function Layout({ children }: LayoutProps) {
       <div className="cinematic-body">
         <nav className="cinematic-nav">
           <ul>
-            <li>
-              <Link
-                to="/dashboard"
-                className={isActive('/dashboard') || isActive('/') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-house" />
-                <span>Dashboard</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/upload"
-                className={isActive('/upload') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-cloud-arrow-up" />
-                <span>Upload Evidence</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/graph"
-                className={isActive('/graph') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-diagram-project" />
-                <span>Graph Explorer</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/trial-university"
-                className={isActive('/trial-university') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-graduation-cap" />
-                <span>Trial University</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/mock-trial"
-                className={isActive('/mock-trial') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-gavel" />
-                <span>Mock Trial Arena</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/live-chat"
-                className={isActive('/live-chat') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-comments" />
-                <span>Live Co-Counsel Chat</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
-
-            <li>
-              <Link
-                to="/workflow"
-                className={isActive('/workflow') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-diagram-predecessor" />
-                <span>Case Workflow</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/centcom"
-                className={isActive('/centcom') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-tower-observation" />
-                <span>CENTCOM</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/design-system"
-                className={isActive('/design-system') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-palette" />
-                <span>Design System</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/dev-team"
-                className={isActive('/dev-team') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-users-gear" />
-                <span>Dev Team</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
-            {/* Add a link for Forensics Report - this will likely be dynamic, so a placeholder for now */}
-            <li>
-              <Link
-                to="/forensics/exampleCase/opposition_documents/exampleDoc" // Placeholder link
-                className={location.pathname.startsWith('/forensics') ? 'active' : ''}
-              >
-                <i className="fa-solid fa-magnifying-glass-chart" />
-                <span>Forensics Report</span>
-                <span className="tab-glow" />
-              </Link>
-            </li>
+            {navItems.map((item) => (
+              <li key={item.to}>
+                <Link
+                  to={item.to}
+                  aria-label={item.longLabel}
+                  title={item.longLabel}
+                  className={
+                    item.to === '/dashboard'
+                      ? (isActive('/dashboard') || isActive('/') ? 'active' : '')
+                      : item.to.startsWith('/forensics/')
+                        ? (location.pathname.startsWith('/forensics') ? 'active' : '')
+                        : (isActive(item.to) ? 'active' : '')
+                  }
+                >
+                  <i className={item.icon} />
+                  <span className="nav-label">{item.label}</span>
+                  <span className="tab-glow" />
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
 
         <main className="cinematic-main">
+          <ActiveCaseRail />
           {children}
         </main>
       </div>
 
       <footer className="cinematic-footer">
         <p>
-          Co-Counsel AI &copy; 2025 | Powered by{' '}
-          <kbd>Google Gemini & Project Veritas</kbd>
+          Co-Counsel AI &copy; 2026 | Powered by{' '}
+          <kbd>Gemini, Swarms, LlamaIndex</kbd>
         </p>
       </footer>
       <OfflineIndicator />
+      <CommandPalette actions={commandActions} />
     </div>
   );
 }
