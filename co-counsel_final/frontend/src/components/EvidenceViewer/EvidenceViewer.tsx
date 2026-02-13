@@ -114,12 +114,12 @@ const EvidenceViewer: React.FC = () => {
       parts.push(
         <span
           key={annotation.id}
-          className="evidence-highlight"
+          className="relative cursor-pointer bg-blue-200 bg-opacity-30 rounded px-1 py-0.5 hover:bg-blue-300 hover:bg-opacity-50 transition-colors duration-200"
           title={`${entity?.type || annotation.type}: ${annotation.text}`}
         >
           {annotation.text}
           {entity && (
-            <Badge variant="secondary" className="evidence-highlight__badge">
+            <Badge variant="secondary" className="ml-1 text-xs bg-blue-500 text-white">
               {entity.type}
             </Badge>
           )}
@@ -132,21 +132,21 @@ const EvidenceViewer: React.FC = () => {
       parts.push(document.content.substring(lastIndex));
     }
 
-    return <p className="evidence-viewer__copy">{parts}</p>;
+    return <p className="whitespace-pre-wrap text-gray-200 leading-relaxed">{parts}</p>;
   };
 
   if (loading) {
     return (
-      <div className="evidence-viewer__state">
-        <Loader2 className="spinner-icon" />
-        <span>Loading document...</span>
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <span className="ml-2 text-gray-400">Loading document...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="evidence-viewer__state error-text">
+      <div className="flex justify-center items-center h-full text-red-500">
         <p>{error}</p>
       </div>
     );
@@ -154,76 +154,67 @@ const EvidenceViewer: React.FC = () => {
 
   if (!document) {
     return (
-      <div className="evidence-viewer__state">
+      <div className="flex justify-center items-center h-full text-gray-400">
         <p>Document not found.</p>
       </div>
     );
   }
 
   return (
-    <section className="evidence-viewer">
-      <Card className="evidence-viewer__card">
-        <CardHeader className="evidence-viewer__header">
-          <CardTitle className="evidence-viewer__title">
-            <FileText className="evidence-viewer__icon" /> {document.title}
+    <div className="p-6 bg-gray-900 min-h-screen text-gray-100">
+      <Card className="bg-gray-800 border-gray-700 shadow-lg">
+        <CardHeader className="border-b border-gray-700">
+          <CardTitle className="flex items-center text-blue-400">
+            <FileText className="mr-2 h-6 w-6" /> {document.title}
           </CardTitle>
-          <div className="evidence-viewer__meta">
-            <span>ID: {document.id}</span>
-            <span>Source: {document.metadata.source}</span>
-            <span>Date: {document.metadata.date}</span>
-          </div>
+          <p className="text-sm text-gray-400">ID: {document.id}</p>
+          <p className="text-xs text-gray-500">Source: {document.metadata.source} | Date: {document.metadata.date}</p>
         </CardHeader>
-        <CardContent className="evidence-viewer__content">
-          <div className="evidence-viewer__layout">
-            <div className="evidence-viewer__main">
-              <h3 className="evidence-viewer__section-title">
-                <FileText className="evidence-viewer__section-icon" /> Document Content
-              </h3>
-              <ScrollArea className="evidence-scroll evidence-scroll--tall">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <h3 className="text-xl font-semibold mb-3 flex items-center"><FileText className="mr-2 h-5 w-5" /> Document Content</h3>
+              <ScrollArea className="h-[600px] w-full rounded-md border border-gray-700 p-4 bg-gray-900">
                 {renderContentWithAnnotations()}
               </ScrollArea>
             </div>
-            <div className="evidence-viewer__side">
-              <h3 className="evidence-viewer__section-title">
-                <Link className="evidence-viewer__section-icon" /> Linked Entities
-              </h3>
-              <ScrollArea className="evidence-scroll evidence-scroll--compact">
+            <div>
+              <h3 className="text-xl font-semibold mb-3 flex items-center"><Link className="mr-2 h-5 w-5" /> Linked Entities</h3>
+              <ScrollArea className="h-[290px] w-full rounded-md border border-gray-700 p-4 bg-gray-900 mb-6">
                 {entities.length > 0 ? (
-                  <div className="evidence-entity-list">
+                  <div className="space-y-2">
                     {entities.map(entity => (
-                      <div key={entity.id} className="evidence-entity-item">
-                        <span>{entity.label}</span>
-                        <Badge variant="outline" className="evidence-chip">{entity.type}</Badge>
+                      <div key={entity.id} className="flex items-center justify-between p-2 bg-gray-700 rounded-md">
+                        <span className="text-gray-100">{entity.label}</span>
+                        <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">{entity.type}</Badge>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="evidence-empty">No entities linked.</p>
+                  <p className="text-gray-400">No entities linked.</p>
                 )}
               </ScrollArea>
 
-              <h3 className="evidence-viewer__section-title">
-                <Lightbulb className="evidence-viewer__section-icon" /> Annotations
-              </h3>
-              <ScrollArea className="evidence-scroll evidence-scroll--compact">
+              <h3 className="text-xl font-semibold mb-3 flex items-center"><Lightbulb className="mr-2 h-5 w-5" /> Annotations</h3>
+              <ScrollArea className="h-[290px] w-full rounded-md border border-gray-700 p-4 bg-gray-900">
                 {annotations.length > 0 ? (
-                  <div className="evidence-annotation-list">
+                  <div className="space-y-2">
                     {annotations.map(anno => (
-                      <div key={anno.id} className="evidence-annotation-item">
-                        <p>"{anno.text}"</p>
-                        <Badge variant="outline" className="evidence-chip evidence-chip--success">{anno.type}</Badge>
+                      <div key={anno.id} className="p-2 bg-gray-700 rounded-md">
+                        <p className="text-gray-100 text-sm">"{anno.text}"</p>
+                        <Badge variant="outline" className="mt-1 bg-green-600 text-white border-green-600">{anno.type}</Badge>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="evidence-empty">No annotations.</p>
+                  <p className="text-gray-400">No annotations.</p>
                 )}
               </ScrollArea>
             </div>
           </div>
         </CardContent>
       </Card>
-    </section>
+    </div>
   );
 };
 

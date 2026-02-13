@@ -5,13 +5,8 @@ Docker Compose Orchestration for Co-Counsel
 - Health checks ensure containers become healthy; frontend depends_on api_healthy.
 - Use scripts/wait-for-docker-compose.sh to build, start, and wait for readiness.
 - One-click prod launcher: ./scripts/run-prod.sh
-- One-click full prod (includes voice): ./scripts/run-prod-full.sh
-- One-click operational smoke export: ./scripts/smoke-operational.sh
 - Wrapper: ./scripts/start-stack-full.sh --mode prod
 - Supports the same flags as start-stack-full.sh (ex: --no-seed, --data-dir, --e2e, --voice)
 - Voice profile:
 - STT: linuxserver/faster-whisper (host port 9000 -> container 10300)
-- TTS: rhasspy/larynx (default voice en-us-amy-low, female)
-- Override images with STT_IMAGE / TTS_IMAGE env vars if desired.
-
-- Natural voice: set `TTS_BACKEND=local` to use Coqui TTS (default in dev/prod env).
+- TTS: rhasspy/larynx (default voice en-us-blizzard_lessac, female)

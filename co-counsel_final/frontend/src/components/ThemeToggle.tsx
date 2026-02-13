@@ -28,10 +28,7 @@ export function ThemeToggle(): JSX.Element {
       onClick={handleToggle}
       disabled={saving}
     >
-      <span className="theme-toggle__icon" aria-hidden="true">
-        <i className={resolved === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun'} />
-      </span>
-      <span className="theme-toggle__label">{resolved === 'dark' ? 'Dark' : 'Light'}</span>
+      {resolved === 'dark' ? '🌙 Dark' : '☀️ Light'}
     </button>
   );
 }

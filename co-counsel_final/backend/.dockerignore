@@ -1,17 +1,31 @@
-__pycache__/
+# macOS extended attributes
+._*
+.DS_Store
+
+# Python
+__pycache__
 *.pyc
 *.pyo
-*.pyd
-.venv/
-venv/
-.env
-.env.*
-*.log
-.DS_Store
-._*
-**/.DS_Store
-**/._*
-node_modules/
-var/
-storage/
-backups/
+.pytest_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# Virtual environments
+.venv
+venv
+env
+
+# Tests and docs
+tests
+docs
+*.md
+
+# Git
+.git
+.gitignore

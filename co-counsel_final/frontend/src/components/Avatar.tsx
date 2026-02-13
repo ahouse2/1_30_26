@@ -1,63 +1,59 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import { buildApiUrl } from '@/config';
+import { Avatar as VisageAvatar } from "@readyplayerme/visage";
+import * as Visage from "@readyplayerme/visage";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import WaWaLipsync from "wawa-lipsync";
 
-const VOICE_PROFILE_STORAGE_KEY = 'co-counsel.voice.profile';
+const modelSrc = "https://models.readyplayer.me/65805362d72a7a816405eca3.glb";
 
-export type AvatarHandle = {
-  speak: (text: string) => Promise<void>;
-};
-
-export const Avatar = forwardRef<AvatarHandle>((_props, ref) => {
+export const Avatar = forwardRef((props, ref) => {
+  const { visage } = Visage.useVisage();
+  const [lipsync, setLipsync] = useState<WaWaLipsync | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [speaking, setSpeaking] = useState(false);
+
+  useEffect(() => {
+    if (visage.head) {
+      const newLipsync = new WaWaLipsync(visage.head);
+      setLipsync(newLipsync);
+    }
+  }, [visage.head]);
 
   const speak = async (text: string) => {
     const audio = audioRef.current;
-    if (!audio || !text.trim()) return;
-    let preferredVoice = 'aurora';
-    try {
-      preferredVoice = localStorage.getItem(VOICE_PROFILE_STORAGE_KEY) || preferredVoice;
-    } catch (_error) {
-      // localStorage may be unavailable in restricted browser modes.
+
+    if (audio) {
+      const response = await fetch(
+        "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "xi-api-key": process.env.REACT_APP_ELEVENLABS_API_KEY || "",
+          },
+          body: JSON.stringify({
+            text,
+            voice_settings: {
+              stability: 0,
+              similarity_boost: 0,
+            },
+          }),
+        }
+      );
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      audio.src = audioUrl;
+      audio.play();
+
+      if (lipsync) {
+        lipsync.start(audio);
+      }
+
+      audio.onended = () => {
+        if (lipsync) {
+          lipsync.stop();
+        }
+      };
     }
-
-    const response = await fetch(buildApiUrl('/voice/tts'), {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text,
-        voice: preferredVoice,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`TTS request failed (${response.status})`);
-    }
-
-    const payload = (await response.json()) as { base64?: string; mime_type?: string };
-    if (!payload.base64) {
-      throw new Error('No audio payload returned from TTS service');
-    }
-
-    const bytes = atob(payload.base64);
-    const raw = new Uint8Array(bytes.length);
-    for (let i = 0; i < bytes.length; i += 1) {
-      raw[i] = bytes.charCodeAt(i);
-    }
-    const audioBlob = new Blob([raw], {
-      type: payload.mime_type || 'audio/wav',
-    });
-    const audioUrl = URL.createObjectURL(audioBlob);
-    audio.src = audioUrl;
-    setSpeaking(true);
-    await audio.play();
-
-    audio.onended = () => {
-      setSpeaking(false);
-      URL.revokeObjectURL(audioUrl);
-    };
   };
 
   useImperativeHandle(ref, () => ({
@@ -65,11 +61,9 @@ export const Avatar = forwardRef<AvatarHandle>((_props, ref) => {
   }));
 
   return (
-    <div className="h-full w-full bg-transparent flex items-center justify-center">
-      <div className={`voice-avatar-orb ${speaking ? 'is-speaking' : ''}`} aria-label="Co-Counsel voice avatar" />
+    <div className="h-full w-full bg-transparent">
+      <VisageAvatar modelSrc={modelSrc} />
       <audio ref={audioRef} hidden />
     </div>
   );
 });
-
-Avatar.displayName = 'Avatar';

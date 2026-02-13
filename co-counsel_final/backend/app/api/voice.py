@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-import base64
 
 from ..models.api import (
     TextToSpeechRequest,
@@ -9,9 +8,8 @@ from ..models.api import (
     VoiceSessionCreateResponse,
     VoiceSessionDetailResponse,
 )
-from ..services.tts import get_tts_service
+from ..services.tts import TextToSpeechService, get_tts_service
 from ..services.voice import VoiceService, VoiceServiceError, get_voice_service
-from ..services.errors import WorkflowAbort
 from ..security.authz import Principal
 from ..security.dependencies import (
     authorize_timeline,
@@ -22,22 +20,9 @@ router = APIRouter()
 @router.post("/voice/tts", response_model=TextToSpeechResponse)
 async def text_to_speech(
     request: TextToSpeechRequest,
-    service=Depends(get_tts_service),
+    service: TextToSpeechService = Depends(get_tts_service),
 ) -> TextToSpeechResponse:
-    try:
-        result = service.synthesise(text=request.text, voice=request.voice)
-    except WorkflowAbort as exc:
-        raise HTTPException(status_code=400, detail=exc.error.to_dict()) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"TTS synthesis failed: {exc}") from exc
-
-    return TextToSpeechResponse(
-        voice=result.voice,
-        mime_type=result.content_type,
-        base64=base64.b64encode(result.audio_bytes).decode("ascii"),
-        cache_hit=result.cache_hit,
-        sha256=result.sha256,
-    )
+    return await service.text_to_speech(request.text, request.persona)
 
 
 @router.post("/voice/sessions", response_model=VoiceSessionCreateResponse)

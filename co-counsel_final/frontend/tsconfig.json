@@ -15,12 +15,6 @@
                         },
     "include":  [
                     "src",
-                    "vite.resolve.ts"
-                ],
-    "exclude":  [
-                    "**/*.test.ts",
-                    "**/*.test.tsx",
-                    "**/__tests__/**",
                     "tests"
                 ],
     "references":  [

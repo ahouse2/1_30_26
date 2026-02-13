@@ -67,7 +67,6 @@ export interface ProviderSettingsSnapshot {
   api_base_urls: Record<string, string>;
   local_runtime_paths: Record<string, string>;
   available: ProviderCatalogEntry[];
-  module_overrides?: Record<string, ModuleModelOverride>;
 }
 
 export interface CredentialStatus {
@@ -84,33 +83,10 @@ export interface AppearanceSettingsSnapshot {
   theme: ThemePreference;
 }
 
-export interface AgentsPolicySettingsSnapshot {
-  enabled: boolean;
-  initial_trust: number;
-  trust_threshold: number;
-  decay: number;
-  success_reward: number;
-  failure_penalty: number;
-  exploration_probability: number;
-  seed?: number | null;
-  observable_roles: string[];
-  suppressible_roles: string[];
-}
-
-export interface GraphRefinementSettingsSnapshot {
-  enabled: boolean;
-  interval_seconds: number;
-  idle_limit: number;
-  min_new_edges: number;
-}
-
 export interface SettingsSnapshot {
   providers: ProviderSettingsSnapshot;
   credentials: CredentialsSnapshot;
   appearance: AppearanceSettingsSnapshot;
-  agents_policy: AgentsPolicySettingsSnapshot;
-  graph_refinement: GraphRefinementSettingsSnapshot;
-  module_catalog?: ModuleCatalogEntry[];
   updated_at?: string | null;
 }
 
@@ -120,20 +96,6 @@ export interface ProviderSettingsUpdatePayload {
   defaults?: Record<string, string | null>;
   api_base_urls?: Record<string, string | null>;
   local_runtime_paths?: Record<string, string | null>;
-  module_overrides?: Record<string, ModuleModelOverride | null>;
-}
-
-export interface ModuleModelOverride {
-  provider_id?: string | null;
-  chat_model?: string | null;
-  embedding_model?: string | null;
-  vision_model?: string | null;
-}
-
-export interface ModuleCatalogEntry {
-  module_id: string;
-  label: string;
-  source: 'core' | 'team';
 }
 
 export interface CredentialSettingsUpdatePayload {
@@ -143,7 +105,6 @@ export interface CredentialSettingsUpdatePayload {
   unicourt_api_key?: string | null;
   lacs_api_key?: string | null;
   caselaw_api_key?: string | null;
-  leginfo_api_key?: string | null;
   research_browser_api_key?: string | null;
 }
 
@@ -151,32 +112,10 @@ export interface AppearanceSettingsUpdatePayload {
   theme?: ThemePreference;
 }
 
-export interface AgentsPolicySettingsUpdatePayload {
-  enabled?: boolean;
-  initial_trust?: number;
-  trust_threshold?: number;
-  decay?: number;
-  success_reward?: number;
-  failure_penalty?: number;
-  exploration_probability?: number;
-  seed?: number | null;
-  observable_roles?: string[];
-  suppressible_roles?: string[];
-}
-
-export interface GraphRefinementSettingsUpdatePayload {
-  enabled?: boolean;
-  interval_seconds?: number;
-  idle_limit?: number;
-  min_new_edges?: number;
-}
-
 export interface SettingsUpdatePayload {
   providers?: ProviderSettingsUpdatePayload;
   credentials?: CredentialSettingsUpdatePayload;
   appearance?: AppearanceSettingsUpdatePayload;
-  agents_policy?: AgentsPolicySettingsUpdatePayload;
-  graph_refinement?: GraphRefinementSettingsUpdatePayload;
 }
 
 export interface CourtProviderStatusEntry {
@@ -187,34 +126,6 @@ export interface CourtProviderStatusEntry {
 
 export interface CourtProviderStatusResponse {
   providers: CourtProviderStatusEntry[];
-}
-
-export interface CourtSearchRequestPayload {
-  provider_id: string;
-  query: string;
-  jurisdiction?: string | null;
-  limit?: number;
-  filters?: Record<string, unknown>;
-}
-
-export interface CourtSearchResponsePayload {
-  results: Array<Record<string, unknown>>;
-}
-
-export interface CourtSyncStatusPayload {
-  providers: Record<string, { ready: boolean; reason?: string }>;
-  cases: Array<{
-    provider: string;
-    case_id: string;
-    documents_found: number;
-    documents_preview: Array<Record<string, unknown>>;
-  }>;
-  upcoming_events: Array<Record<string, unknown>>;
-  payment_queue: {
-    pending: number;
-    authorized: number;
-    total: number;
-  };
 }
 
 export interface OutcomeProbability {
@@ -268,39 +179,6 @@ export interface StoryboardScene {
 export interface StoryboardResponse {
   generated_at: string;
   scenes: StoryboardScene[];
-}
-
-export interface TimelineMediaHook {
-  hook_id: string;
-  event_id: string;
-  title: string;
-  media_type: 'image' | 'video';
-  prompt: string;
-  status: 'queued' | 'ready';
-  citations: string[];
-  provider?: string | null;
-  model?: string | null;
-}
-
-export interface TimelineMediaHooksResponse {
-  generated_at: string;
-  hooks: TimelineMediaHook[];
-}
-
-export interface ForensicsReportVersion {
-  version_id: string;
-  created_at: string;
-  source: 'current' | 'snapshot';
-  artifacts: string[];
-  path: string;
-}
-
-export interface ForensicsAuditEvent {
-  timestamp?: string | null;
-  event_type: string;
-  principal_id: string;
-  resource_id: string;
-  details: Record<string, unknown>;
 }
 
 export interface QueryResponse {

@@ -1,39 +1,20 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field, HttpUrl, ConfigDict
 
 
-class SourceType(str, Enum):
-    FILE = "file"
-    LOCAL = "local"
-    REMOTE = "remote"
-    URL = "url"
-
-
 class IngestionSource(BaseModel):
-    source_id: Optional[str] = None
-    type: SourceType | str = Field(description="Source type identifier")
+    type: str = Field(description="Source type identifier")
     path: Optional[str] = Field(default=None, description="Filesystem path for local sources")
-    uri: Optional[str] = Field(default=None, description="URI for document sources")
     credRef: Optional[str] = Field(default=None, description="Credential reference for remote sources")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Optional source metadata")
 
 
-class AutomationPreferences(BaseModel):
-    auto_run: bool = Field(default=True)
-    stages: List[str] = Field(default_factory=list)
-    question: Optional[str] = None
-    case_id: Optional[str] = None
-    autonomy_level: str = Field(default="balanced")
-
-
 class IngestionRequest(BaseModel):
     sources: List[IngestionSource]
-    automation: Optional[AutomationPreferences] = None
 
 
 class IngestionTextRequest(BaseModel):
@@ -162,36 +143,6 @@ class IngestionStatusResponse(BaseModel):
     status_details: IngestionStatusDetailsModel
 
 
-class AutomationStageModel(BaseModel):
-    name: str
-    status: str
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
-    message: Optional[str] = None
-
-
-class AutomationResultsModel(BaseModel):
-    graph: Optional[Dict[str, Any]] = None
-    forensics: Optional[Dict[str, Any]] = None
-    legal_frameworks: List[Dict[str, Any]] = Field(default_factory=list)
-    timeline: Optional[Dict[str, Any]] = None
-    presentation: Optional[Dict[str, Any]] = None
-
-
-class AutomationPipelineResponse(BaseModel):
-    job_id: str
-    stages: List[AutomationStageModel]
-    results: AutomationResultsModel
-
-
-class AutomationPipelineRunRequest(BaseModel):
-    stages: List[str] = Field(default_factory=list)
-    question: Optional[str] = None
-    case_id: Optional[str] = None
-    autonomy_level: str = Field(default="balanced")
-    force: bool = Field(default=False)
-
-
 class CitationEntityModel(BaseModel):
     id: str
     label: str
@@ -268,58 +219,6 @@ class TimelinePaginationModel(BaseModel):
     has_more: bool
 
 
-class TimelineExportRequestModel(BaseModel):
-    format: Literal["md", "html", "pdf", "xlsx"]
-    case_id: Optional[str] = None
-    entity: Optional[str] = None
-    topic: Optional[str] = None
-    source: Optional[str] = None
-    from_ts: Optional[datetime] = None
-    to_ts: Optional[datetime] = None
-    risk_band: Optional[str] = None
-    motion_due_before: Optional[datetime] = None
-    motion_due_after: Optional[datetime] = None
-    storyboard: bool = False
-
-
-class TimelineExportResponseModel(BaseModel):
-    export_id: str
-    format: str
-    filename: str
-    download_url: str
-    created_at: datetime
-
-
-class StoryboardSceneModel(BaseModel):
-    id: str
-    title: str
-    narrative: str
-    citations: List[str] = Field(default_factory=list)
-    visual_prompt: Optional[str] = None
-
-
-class StoryboardResponseModel(BaseModel):
-    generated_at: str
-    scenes: List[StoryboardSceneModel]
-
-
-class TimelineMediaHookModel(BaseModel):
-    hook_id: str
-    event_id: str
-    title: str
-    media_type: Literal["image", "video"]
-    prompt: str
-    status: Literal["queued", "ready"]
-    citations: List[str] = Field(default_factory=list)
-    provider: Optional[str] = None
-    model: Optional[str] = None
-
-
-class TimelineMediaHooksResponseModel(BaseModel):
-    generated_at: str
-    hooks: List[TimelineMediaHookModel]
-
-
 class GraphNodeModel(BaseModel):
     id: str
     type: str
@@ -374,90 +273,9 @@ class GraphStrategyBriefModel(BaseModel):
     leverage_points: List[GraphLeveragePointModel] = Field(default_factory=list)
 
 
-class GraphStrategyBrief(GraphStrategyBriefModel):
-    """Alias used by downstream services expecting GraphStrategyBrief."""
-    pass
-
-
-class LegalFrameworkModel(BaseModel):
-    framework_id: str
-    label: str
-    strategy_brief: Dict[str, Any]
-    source_documents: List[str]
-    score: Optional[float] = None
-
-
 class GraphNeighborResponse(BaseModel):
     nodes: List[GraphNodeModel]
     edges: List[GraphEdgeModel]
-
-
-class GraphSearchResponse(BaseModel):
-    nodes: List[GraphNodeModel]
-
-
-class GraphFactModel(BaseModel):
-    id: str
-    claim: str
-    relation: str
-    source_id: str
-    target_id: str
-    citations: List[str] = Field(default_factory=list)
-    confidence: float
-
-
-class GraphFactExtractionResponse(BaseModel):
-    generated_at: str
-    case_id: Optional[str] = None
-    total: int
-    facts: List[GraphFactModel] = Field(default_factory=list)
-
-
-class GraphSnapshotCreateRequest(BaseModel):
-    case_id: Optional[str] = None
-    limit: int = Field(default=250, ge=1, le=2000)
-    notes: Optional[str] = None
-
-
-class GraphSnapshotRecordModel(BaseModel):
-    snapshot_id: str
-    case_id: Optional[str] = None
-    created_at: str
-    node_count: int
-    edge_count: int
-    checksum: str
-    notes: Optional[str] = None
-
-
-class GraphSnapshotListResponse(BaseModel):
-    snapshots: List[GraphSnapshotRecordModel] = Field(default_factory=list)
-
-
-class GraphSnapshotDiffRequest(BaseModel):
-    baseline_snapshot_id: str
-    candidate_snapshot_id: str
-
-
-class GraphSnapshotDiffSummaryModel(BaseModel):
-    added_nodes: int
-    removed_nodes: int
-    modified_nodes: int
-    added_edges: int
-    removed_edges: int
-    modified_edges: int
-
-
-class GraphSnapshotDiffResponse(BaseModel):
-    baseline_snapshot_id: str
-    candidate_snapshot_id: str
-    computed_at: str
-    summary: GraphSnapshotDiffSummaryModel
-    added_nodes: List[Dict[str, Any]] = Field(default_factory=list)
-    removed_nodes: List[Dict[str, Any]] = Field(default_factory=list)
-    modified_nodes: List[Dict[str, Any]] = Field(default_factory=list)
-    added_edges: List[Dict[str, Any]] = Field(default_factory=list)
-    removed_edges: List[Dict[str, Any]] = Field(default_factory=list)
-    modified_edges: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class ForensicsStageModel(BaseModel):
@@ -484,71 +302,6 @@ class ForensicsResponse(BaseModel):
     fallback_applied: bool
     schema_version: str
     generated_at: Optional[datetime] = None
-
-
-class ForensicsReportVersionModel(BaseModel):
-    version_id: str
-    created_at: datetime
-    source: Literal["current", "snapshot"]
-    artifacts: List[str] = Field(default_factory=list)
-    path: str
-
-
-class ForensicsReportHistoryResponseModel(BaseModel):
-    file_id: str
-    versions: List[ForensicsReportVersionModel]
-
-
-class ForensicsAuditEventModel(BaseModel):
-    timestamp: Optional[datetime] = None
-    event_type: str
-    principal_id: str
-    resource_id: str
-    details: Dict[str, Any] = Field(default_factory=dict)
-
-
-class ForensicsAuditResponseModel(BaseModel):
-    file_id: str
-    events: List[ForensicsAuditEventModel]
-
-
-class ForensicsExportRequestModel(BaseModel):
-    format: Literal["json", "md", "html"]
-    artifact: Optional[Literal["document", "image", "financial"]] = None
-
-
-class ForensicsExportResponseModel(BaseModel):
-    export_id: str
-    format: str
-    filename: str
-    download_url: str
-    created_at: datetime
-
-
-class PresentationExportItemModel(BaseModel):
-    document_id: str
-    name: str
-    description: Optional[str] = None
-    added_at: datetime
-    citations: List[str] = Field(default_factory=list)
-
-
-class PresentationExportRequestModel(BaseModel):
-    format: Literal["md", "html", "pdf", "xlsx"]
-    binder_id: Optional[str] = None
-    binder_name: str
-    binder_description: Optional[str] = None
-    phase: Optional[str] = None
-    presenter_notes: Optional[str] = None
-    items: List[PresentationExportItemModel] = Field(default_factory=list)
-
-
-class PresentationExportResponseModel(BaseModel):
-    export_id: str
-    format: str
-    filename: str
-    download_url: str
-    created_at: datetime
 
 
 class AgentRunRequest(BaseModel):
@@ -807,10 +560,6 @@ class KnowledgeBookmarkResponse(BaseModel):
     lesson_id: str
     bookmarked: bool
     bookmarks: List[str]
-
-
-class SandboxCommandRequestModel(BaseModel):
-    command: List[str]
 
 
 class SandboxCommandResultModel(BaseModel):
@@ -1155,7 +904,6 @@ class ProviderSettingsSnapshotModel(BaseModel):
     api_base_urls: Dict[str, str]
     local_runtime_paths: Dict[str, str]
     available: List[ProviderCatalogEntryModel]
-    module_overrides: Dict[str, "ModuleModelOverrideModel"] = Field(default_factory=dict)
 
 
 class CredentialStatusModel(BaseModel):
@@ -1168,91 +916,14 @@ class CredentialsSnapshotModel(BaseModel):
     services: Dict[str, bool]
 
 
-class CourtProviderStatusEntry(BaseModel):
-    provider_id: str
-    ready: bool
-    reason: Optional[str] = None
-
-
-class CourtProviderStatusResponse(BaseModel):
-    providers: List[CourtProviderStatusEntry]
-
-
-class CourtSearchRequest(BaseModel):
-    provider_id: str
-    query: str
-    jurisdiction: Optional[str] = None
-    limit: int = Field(default=10, ge=1, le=200)
-    filters: Optional[Dict[str, Any]] = None
-
-
-class CourtSearchResponse(BaseModel):
-    results: List[Dict[str, Any]]
-
-
-class CourtDocumentFetchRequest(BaseModel):
-    provider_id: str
-    case_id: str
-    document_id: str
-    docket_id: Optional[str] = None
-    paid: bool = False
-    amount_estimate: Optional[float] = None
-    currency: str = Field(default="USD")
-    requested_by: Optional[str] = None
-
-
-class CourtDocumentFetchResponse(BaseModel):
-    status: str
-    ledger_id: Optional[str] = None
-    document: Optional[Dict[str, Any]] = None
-
-
-class CourtPaymentAuthorizeRequest(BaseModel):
-    provider_id: str
-    case_id: str
-    docket_id: Optional[str] = None
-    document_id: Optional[str] = None
-    amount_actual: float
-    currency: str = Field(default="USD")
-    authorized_by: str
-    ledger_id: Optional[str] = None
-
-
-class CourtPaymentAuthorizeResponse(BaseModel):
-    status: str
-
-
 class AppearanceSettingsSnapshotModel(BaseModel):
     theme: Literal["system", "light", "dark"]
-
-
-class AgentsPolicySettingsSnapshotModel(BaseModel):
-    enabled: bool
-    initial_trust: float
-    trust_threshold: float
-    decay: float
-    success_reward: float
-    failure_penalty: float
-    exploration_probability: float
-    seed: Optional[int]
-    observable_roles: List[str]
-    suppressible_roles: List[str]
-
-
-class GraphRefinementSettingsSnapshotModel(BaseModel):
-    enabled: bool
-    interval_seconds: float
-    idle_limit: int
-    min_new_edges: int
 
 
 class SettingsResponse(BaseModel):
     providers: ProviderSettingsSnapshotModel
     credentials: CredentialsSnapshotModel
     appearance: AppearanceSettingsSnapshotModel
-    agents_policy: AgentsPolicySettingsSnapshotModel
-    graph_refinement: GraphRefinementSettingsSnapshotModel
-    module_catalog: List["ModuleCatalogEntryModel"] = Field(default_factory=list)
     updated_at: Optional[datetime]
 
 
@@ -1264,27 +935,6 @@ class ProviderSettingsUpdate(BaseModel):
     defaults: Optional[Dict[str, str]] = None
     api_base_urls: Optional[Dict[str, str]] = None
     local_runtime_paths: Optional[Dict[str, str]] = None
-    module_overrides: Optional[Dict[str, "ModuleModelOverrideUpdateModel"]] = None
-
-
-class ModuleModelOverrideModel(BaseModel):
-    provider_id: Optional[str] = None
-    chat_model: Optional[str] = None
-    embedding_model: Optional[str] = None
-    vision_model: Optional[str] = None
-
-
-class ModuleModelOverrideUpdateModel(BaseModel):
-    provider_id: Optional[str] = None
-    chat_model: Optional[str] = None
-    embedding_model: Optional[str] = None
-    vision_model: Optional[str] = None
-
-
-class ModuleCatalogEntryModel(BaseModel):
-    module_id: str
-    label: str
-    source: Literal["core", "team"]
 
 
 class CredentialSettingsUpdate(BaseModel):
@@ -1292,11 +942,6 @@ class CredentialSettingsUpdate(BaseModel):
 
     provider_api_keys: Optional[Dict[str, Optional[str]]] = None
     courtlistener_token: Optional[str] = None
-    pacer_api_key: Optional[str] = None
-    unicourt_api_key: Optional[str] = None
-    lacs_api_key: Optional[str] = None
-    caselaw_api_key: Optional[str] = None
-    leginfo_api_key: Optional[str] = None
     research_browser_api_key: Optional[str] = None
 
 
@@ -1306,39 +951,9 @@ class AppearanceSettingsUpdate(BaseModel):
     theme: Optional[Literal["system", "light", "dark"]] = None
 
 
-class AgentsPolicySettingsUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    enabled: Optional[bool] = None
-    initial_trust: Optional[float] = Field(default=None, ge=0.0, le=2.0)
-    trust_threshold: Optional[float] = Field(default=None, ge=0.0, le=1.5)
-    decay: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    success_reward: Optional[float] = Field(default=None, ge=0.0, le=1.5)
-    failure_penalty: Optional[float] = Field(default=None, ge=0.0, le=2.0)
-    exploration_probability: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    seed: Optional[int] = None
-    observable_roles: Optional[List[str]] = None
-    suppressible_roles: Optional[List[str]] = None
-
-
-class GraphRefinementSettingsUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    enabled: Optional[bool] = None
-    interval_seconds: Optional[float] = Field(default=None, ge=60.0)
-    idle_limit: Optional[int] = Field(default=None, ge=1)
-    min_new_edges: Optional[int] = Field(default=None, ge=0)
-
-
 class SettingsUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     providers: Optional[ProviderSettingsUpdate] = None
     credentials: Optional[CredentialSettingsUpdate] = None
     appearance: Optional[AppearanceSettingsUpdate] = None
-    agents_policy: Optional[AgentsPolicySettingsUpdate] = None
-    graph_refinement: Optional[GraphRefinementSettingsUpdate] = None
-
-
-class SettingsModelRefreshRequest(BaseModel):
-    provider_id: str

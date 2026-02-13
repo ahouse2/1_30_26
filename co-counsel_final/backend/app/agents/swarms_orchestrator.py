@@ -6,10 +6,7 @@ import json
 from typing import Any, Dict, List, Tuple
 from uuid import uuid4
 
-try:  # Optional Swarms dependency
-    from swarms import Agent as SwarmsAgent  # type: ignore
-except Exception:  # pragma: no cover - Swarms optional in local/dev
-    SwarmsAgent = None  # type: ignore
+from swarms import Agent
 
 from ..config import get_settings
 from ..services.errors import WorkflowAbort, WorkflowComponent, WorkflowError, WorkflowSeverity
@@ -35,8 +32,8 @@ class SwarmsOrchestrator:
     memory_store: AgentMemoryStore
     max_rounds: int = 12
     tools: Dict[str, AgentTool] = field(init=False)
-    router_agent: "SwarmsAgent" = field(init=False)
-    synthesis_agent: "SwarmsAgent" = field(init=False)
+    router_agent: Agent = field(init=False)
+    synthesis_agent: Agent = field(init=False)
 
     def __post_init__(self) -> None:
         self.tools = {
@@ -49,9 +46,7 @@ class SwarmsOrchestrator:
         }
         settings = get_settings()
         model_name = settings.default_chat_model
-        if SwarmsAgent is None:
-            raise RuntimeError("Swarms dependency is not installed; install 'swarms' to use SwarmsOrchestrator.")
-        self.router_agent = SwarmsAgent(
+        self.router_agent = Agent(
             agent_name="swarm-router",
             agent_description="Routes requests to the correct legal workflow steps.",
             system_prompt=self._router_system_prompt(),
@@ -59,7 +54,7 @@ class SwarmsOrchestrator:
             max_loops=1,
             output_type="json",
         )
-        self.synthesis_agent = SwarmsAgent(
+        self.synthesis_agent = Agent(
             agent_name="swarm-synthesizer",
             agent_description="Synthesizes multi-step outputs into a single legal response.",
             system_prompt=self._synthesis_system_prompt(),

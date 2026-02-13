@@ -31,10 +31,6 @@ type QueryContextValue = {
   refreshTimelineOnDemand: () => Promise<void>;
   timelineEntityFilter: string | null;
   setTimelineEntityFilter: (entity: string | null) => void;
-  timelineTopicFilter: string | null;
-  setTimelineTopicFilter: (topic: string | null) => void;
-  timelineSourceFilter: string | null;
-  setTimelineSourceFilter: (source: string | null) => void;
   timelineRiskBand: 'low' | 'medium' | 'high' | null;
   setTimelineRiskBand: (band: 'low' | 'medium' | 'high' | null) => void;
   timelineDeadline: string | null;
@@ -57,8 +53,6 @@ export function QueryProvider({ children }: { children: ReactNode }): JSX.Elemen
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [timelineMeta, setTimelineMeta] = useState<TimelineResponse['meta'] | null>(initialMeta);
   const [timelineEntityFilter, setTimelineEntityFilter] = useState<string | null>(null);
-  const [timelineTopicFilter, setTimelineTopicFilter] = useState<string | null>(null);
-  const [timelineSourceFilter, setTimelineSourceFilter] = useState<string | null>(null);
   const [timelineRiskBand, setTimelineRiskBand] = useState<'low' | 'medium' | 'high' | null>(null);
   const [timelineDeadline, setTimelineDeadline] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -204,8 +198,6 @@ export function QueryProvider({ children }: { children: ReactNode }): JSX.Elemen
     try {
       const response = await fetchTimeline({
         entity: timelineEntityFilter ?? undefined,
-        topic: timelineTopicFilter ?? undefined,
-        source: timelineSourceFilter ?? undefined,
         limit: 20,
         risk_band: timelineRiskBand ?? undefined,
         motion_due_before: timelineDeadline ?? undefined,
@@ -217,14 +209,7 @@ export function QueryProvider({ children }: { children: ReactNode }): JSX.Elemen
       console.warn('Timeline refresh failed', timelineError);
       setTimelineLoading(false);
     }
-  }, [
-    persistTimeline,
-    timelineEntityFilter,
-    timelineTopicFilter,
-    timelineSourceFilter,
-    timelineRiskBand,
-    timelineDeadline,
-  ]);
+  }, [persistTimeline, timelineEntityFilter, timelineRiskBand, timelineDeadline]);
 
   const completeViaHttp = useCallback(
     async (assistantId: string, prompt: string) => {
@@ -363,8 +348,6 @@ export function QueryProvider({ children }: { children: ReactNode }): JSX.Elemen
         const response = await fetchTimeline({
           cursor: timelineMeta.cursor ?? undefined,
           entity: timelineEntityFilter ?? undefined,
-          topic: timelineTopicFilter ?? undefined,
-          source: timelineSourceFilter ?? undefined,
           limit: timelineMeta.limit ?? 20,
           risk_band: timelineRiskBand ?? undefined,
           motion_due_before: timelineDeadline ?? undefined,
@@ -380,8 +363,6 @@ export function QueryProvider({ children }: { children: ReactNode }): JSX.Elemen
   }, [
     persistTimeline,
     timelineEntityFilter,
-    timelineTopicFilter,
-    timelineSourceFilter,
     timelineEvents,
     timelineMeta,
     timelineRiskBand,
@@ -405,10 +386,6 @@ export function QueryProvider({ children }: { children: ReactNode }): JSX.Elemen
       refreshTimelineOnDemand,
       timelineEntityFilter,
       setTimelineEntityFilter,
-      timelineTopicFilter,
-      setTimelineTopicFilter,
-      timelineSourceFilter,
-      setTimelineSourceFilter,
       timelineRiskBand,
       setTimelineRiskBand,
       timelineDeadline,
@@ -434,8 +411,6 @@ export function QueryProvider({ children }: { children: ReactNode }): JSX.Elemen
       loadMoreTimeline,
       refreshTimelineOnDemand,
       timelineEntityFilter,
-      timelineTopicFilter,
-      timelineSourceFilter,
       timelineRiskBand,
       timelineDeadline,
       retrievalMode,

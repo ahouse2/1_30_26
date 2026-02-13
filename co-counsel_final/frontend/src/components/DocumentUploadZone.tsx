@@ -34,21 +34,22 @@ const DocumentUploadZone: React.FC<DocumentUploadZoneProps> = ({ caseId, onUploa
   });
 
   return (
-    <div className="upload-dropzone">
-      <div
-        {...getRootProps()}
-        className={`upload-dropzone__target${isDragActive ? ' active' : ''}`}
-      >
+    <div className="p-4 border-2 border-dashed rounded-lg text-center">
+      <div {...getRootProps()} className={`cursor-pointer ${isDragActive ? 'border-blue-500 bg-blue-100' : 'border-gray-300 bg-gray-50'} p-8 rounded-md`}>
         <input {...getInputProps()} />
-        {isDragActive ? <p>Drop the files here…</p> : <p>Drag & drop files, or click to select</p>}
-        {isUploading && <p className="upload-dropzone__status">Uploading...</p>}
+        {
+          isDragActive ?
+            <p>Drop the files here ...</p> :
+            <p>Drag 'n' drop some files here, or click to select files</p>
+        }
+        {isUploading && <p className="mt-2 text-blue-600">Uploading...</p>}
       </div>
-      <div className="upload-dropzone__meta">
-        <label htmlFor="docType">Document Type</label>
+      <div className="mt-4">
+        <label htmlFor="docType" className="block text-sm font-medium text-gray-700">Document Type:</label>
         <select
           id="docType"
           name="docType"
-          className="input-cinematic"
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
           value={docType}
           onChange={(e) => setDocType(e.target.value as 'my_documents' | 'opposition_documents')}
           disabled={isUploading}

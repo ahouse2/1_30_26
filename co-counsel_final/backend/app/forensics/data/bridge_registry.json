@@ -1,7 +1,0 @@
-{
-  "ethereum_arbitrum_canonical": {
-    "source_chain": 1,
-    "dest_chain": 42161,
-    "name": "Arbitrum Canonical Bridge"
-  }
-}

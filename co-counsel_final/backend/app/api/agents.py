@@ -2,13 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List
 
-from backend.app.models.api import (
-    AgentRunRequest,
-    AgentRunResponse,
-    AgentThreadListResponse,
-)
-from backend.app.services.agents import AgentsService, get_agents_service
-
 from backend.app.agents.runner import get_orchestrator as build_orchestrator
 from backend.app.agents.orchestrator import AgentsOrchestrator
 from backend.app.config import LlmConfig, get_llm_config, get_settings
@@ -43,7 +36,7 @@ class AgentInteractionRequest(BaseModel):
 class AgentInteractionResponse(BaseModel):
     response: str
 
-@router.post("/invoke", response_model=AgentInteractionResponse)
+@router.post("/agents/invoke", response_model=AgentInteractionResponse)
 async def invoke_agent(
     request: AgentInteractionRequest,
     orchestrator: AgentsOrchestrator = Depends(get_orchestrator),
@@ -60,46 +53,6 @@ async def invoke_agent(
         return AgentInteractionResponse(response=response)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/run", response_model=AgentRunResponse)
-async def agents_run(
-    payload: AgentRunRequest,
-    service: AgentsService = Depends(get_agents_service),
-) -> AgentRunResponse:
-    top_k = payload.top_k or 5
-    try:
-        response = service.run_case(
-            payload.case_id,
-            payload.question,
-            top_k=top_k,
-            principal=None,
-            autonomy_level=payload.autonomy_level,
-            max_turns=payload.max_turns,
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return AgentRunResponse(**response)
-
-
-@router.get("/threads/{thread_id}", response_model=AgentRunResponse)
-async def agents_thread(
-    thread_id: str,
-    service: AgentsService = Depends(get_agents_service),
-) -> AgentRunResponse:
-    try:
-        payload = service.get_thread(thread_id)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return AgentRunResponse(**payload)
-
-
-@router.get("/threads", response_model=AgentThreadListResponse)
-async def agents_threads(
-    service: AgentsService = Depends(get_agents_service),
-) -> AgentThreadListResponse:
-    threads = service.list_threads()
-    return AgentThreadListResponse(threads=threads)
 
 class ReasoningRequest(BaseModel):
     case_id: str
@@ -129,8 +82,6 @@ async def analyze_case(
         summary = reasoning_engine.analyze_and_summarize_case(request.case_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-    return ReasoningResponse(summary=summary)
 
 
 def get_drafting_prompt(document_type: str, text: str, case_summary: str) -> str:

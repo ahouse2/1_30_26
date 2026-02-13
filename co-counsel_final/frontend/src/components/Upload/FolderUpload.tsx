@@ -20,17 +20,21 @@ const FolderUpload: React.FC<FolderUploadProps> = ({ onFolderSelected }) => {
   });
 
   return (
-    <div {...getRootProps()} className={`folder-upload${isDragActive ? ' active' : ''}`}>
+    <div
+      {...getRootProps()}
+      className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-200
+        ${isDragActive ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700 bg-gray-800 hover:border-gray-600'}`}
+    >
       <input {...getInputProps()} />
       {isDragActive ? (
-        <FolderOpen className="folder-upload__icon active" />
+        <FolderOpen className="w-12 h-12 text-blue-400" />
       ) : (
-        <Inbox className="folder-upload__icon" />
+        <Inbox className="w-12 h-12 text-gray-400" />
       )}
-      <p className="folder-upload__headline">
-        Drag & drop a folder here, or <span>click to select folder</span>
+      <p className="mt-4 text-lg text-gray-300">
+        Drag & drop a folder here, or <span className="text-blue-400 font-medium">click to select folder</span>
       </p>
-      <p className="folder-upload__subtext">Select an entire directory for ingestion</p>
+      <p className="text-sm text-gray-500">Select an entire directory for ingestion</p>
     </div>
   );
 };

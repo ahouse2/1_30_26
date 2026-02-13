@@ -167,18 +167,8 @@ async def ingest_text(
     request: IngestionTextRequest,
     principal: Principal = Depends(authorize_ingest_enqueue),
     service: IngestionService = Depends(get_ingestion_service),
-    ) -> IngestionResponse:
-    return await service.ingest_text(principal, request.document_id, request.text)
-
-
-@router.post("/ingestion/submit", response_model=IngestionResponse)
-async def submit_ingestion_request(
-    request: IngestionRequest,
-    principal: Principal = Depends(authorize_ingest_enqueue),
-    service: IngestionService = Depends(get_ingestion_service),
 ) -> IngestionResponse:
-    job_id = service.ingest(request, principal=principal)
-    return IngestionResponse(job_id=job_id, status="queued")
+    return await service.ingest_text(principal, request.document_id, request.text)
 
 
 @router.get("/ingestion/{document_id}/status", response_model=IngestionStatusResponse)

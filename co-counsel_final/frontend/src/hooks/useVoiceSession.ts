@@ -3,8 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createVoiceSession, fetchVoicePersonas, fetchVoiceSession } from '@/utils/apiClient';
 import { VoicePersona, VoiceSession, VoiceSessionResponse } from '@/types';
 
-const VOICE_PROFILE_STORAGE_KEY = 'co-counsel.voice.profile';
-
 export interface VoiceSessionController {
   personas: VoicePersona[];
   selectedPersona: string | null;
@@ -38,14 +36,7 @@ export function useVoiceSession(): VoiceSessionController {
         if (cancelled) return;
         setPersonas(items);
         if (!selectedPersona && items.length > 0) {
-          let preferred: string | null = null;
-          try {
-            preferred = localStorage.getItem(VOICE_PROFILE_STORAGE_KEY);
-          } catch (_error) {
-            preferred = null;
-          }
-          const matched = preferred && items.some((item) => item.persona_id === preferred);
-          setSelectedPersona(matched ? preferred : items[0].persona_id);
+          setSelectedPersona(items[0].persona_id);
         }
       })
       .catch((err) => {
@@ -56,15 +47,6 @@ export function useVoiceSession(): VoiceSessionController {
     return () => {
       cancelled = true;
     };
-  }, [selectedPersona]);
-
-  useEffect(() => {
-    if (!selectedPersona) return;
-    try {
-      localStorage.setItem(VOICE_PROFILE_STORAGE_KEY, selectedPersona);
-    } catch (_error) {
-      // localStorage may be unavailable in restricted browser modes.
-    }
   }, [selectedPersona]);
 
   const teardownAudio = useCallback(() => {

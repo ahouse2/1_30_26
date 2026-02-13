@@ -1,11 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-try:
-    from jose import JWTError, jwt
-except ImportError:
-    # Runtime fallback for environments that only ship PyJWT.
-    import jwt
-    JWTError = jwt.PyJWTError
+from jose import JWTError, jwt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from backend.app.config import get_settings, Settings

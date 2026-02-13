@@ -33,12 +33,6 @@ const DEMO_SERVICE_REQUESTS: ServiceRequest[] = [
 const isNonJsonResponse = (err: unknown) =>
   err instanceof Error && err.message.toLowerCase().includes('unexpected response');
 
-const statusTone: Record<ServiceRequest['status'], string> = {
-  Pending: 'status-pill neutral',
-  Served: 'status-pill success',
-  Failed: 'status-pill danger',
-};
-
 export default function ServiceOfProcessPage() {
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [newRequest, setNewRequest] = useState({ documentName: '', recipient: '' });
@@ -112,82 +106,70 @@ export default function ServiceOfProcessPage() {
   };
 
   return (
-    <div className="bg-background-canvas text-text-primary min-h-screen p-8">
+    <div className="bg-background-canvas text-text-primary h-screen p-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
         className="panel-shell"
       >
         <header>
-          <p className="panel-eyebrow">Operations / Service of Process</p>
-          <h2 className="text-holographic">Service of Process Control</h2>
-          <p className="panel-subtitle">
-            Track service tasks, manage court delivery vendors, and keep a clean chain-of-custody audit.
-          </p>
+          <h2>Service of Process</h2>
+          <p className="panel-subtitle">Manage and track your service of process requests.</p>
         </header>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <section className="lg:col-span-2 card-cinematic p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Live Service Requests</h3>
-                <p className="text-text-secondary text-sm">Status, recipients, and proof returns.</p>
-              </div>
+        <div className="mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-2">
+              <h3 className="text-lg font-semibold">Service Requests</h3>
               {demoMode && (
-                <span className="status-pill warning">Offline Demo</span>
+                <p className="text-xs uppercase tracking-[0.4em] text-accent-gold mt-2">
+                  Demo service requests (offline)
+                </p>
               )}
+              {isLoading && <p>Loading...</p>}
+              {error && <p className="text-red-500 text-sm mt-2">Error: {error}</p>}
+              <ul className="mt-4 space-y-4">
+                {serviceRequests.map((request) => (
+                  <li key={request.id} className="bg-background-surface p-4 rounded-lg flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold">{request.documentName}</p>
+                      <p className="text-text-secondary">Recipient: {request.recipient}</p>
+                    </div>
+                    <p className={`font-semibold ${
+                      request.status === 'Served' ? 'text-accent-green' :
+                      request.status === 'Failed' ? 'text-accent-red' : 'text-text-secondary'
+                    }`}>{request.status}</p>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div className="divider-cinematic" />
-            {isLoading && <p className="text-text-secondary">Loading...</p>}
-            {error && <p className="text-red-400 text-sm mt-2">Error: {error}</p>}
-            <ul className="mt-4 space-y-4">
-              {serviceRequests.map((request) => (
-                <li key={request.id} className="glass-panel p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold">{request.documentName}</p>
-                    <p className="text-text-secondary text-sm">Recipient: {request.recipient}</p>
-                  </div>
-                  <span className={statusTone[request.status]}>{request.status}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-          <section className="card-cinematic p-6">
-            <h3 className="text-lg font-semibold">Create New Request</h3>
-            <p className="text-text-secondary text-sm">Route new documents to your service partners.</p>
-            <div className="divider-cinematic" />
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="service-document" className="panel-label">Document Name</label>
+            <div>
+              <h3 className="text-lg font-semibold">New Request</h3>
+              <div className="mt-4 space-y-4">
                 <input
-                  id="service-document"
                   type="text"
-                  placeholder="Summons & Complaint"
+                  placeholder="Document Name"
                   value={newRequest.documentName}
                   onChange={(e) => setNewRequest({ ...newRequest, documentName: e.target.value })}
-                  className="input-cinematic w-full"
+                  className="w-full p-2 bg-background-surface border border-border rounded-lg"
                 />
-              </div>
-              <div>
-                <label htmlFor="service-recipient" className="panel-label">Recipient</label>
                 <input
-                  id="service-recipient"
                   type="text"
-                  placeholder="Process server / sheriff / courier"
+                  placeholder="Recipient"
                   value={newRequest.recipient}
                   onChange={(e) => setNewRequest({ ...newRequest, recipient: e.target.value })}
-                  className="input-cinematic w-full"
+                  className="w-full p-2 bg-background-surface border border-border rounded-lg"
                 />
+                <button
+                  onClick={handleCreateRequest}
+                  className="w-full bg-accent-violet-500 text-white py-2 px-4 rounded-lg hover:bg-accent-violet-600 transition-colors"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Creating...' : 'Create Request'}
+                </button>
               </div>
-              <button
-                onClick={handleCreateRequest}
-                className="btn-cinematic w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Creating...' : 'Dispatch Request'}
-              </button>
             </div>
-          </section>
+          </div>
         </div>
       </motion.div>
     </div>

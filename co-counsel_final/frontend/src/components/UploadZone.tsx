@@ -118,17 +118,15 @@ export function UploadZone() {
           onChange={handleFileInputChange}
         />
         <div className="upload-copy">
-          <div className="upload-icon">
-            <i className="fa-solid fa-cloud-arrow-up" />
-          </div>
+          <div className="upload-icon">📁</div>
           <p className="upload-title">Drag & Drop or Browse Files</p>
           <p className="upload-subtitle">{uploadedFile ? uploadedFile.name : 'Max size 50MB'}</p>
           {isUploading && (
-            <div className="progress-cinematic upload-progress">
+            <div className="progress-cinematic mt-2">
               <div className="progress-fill" style={{ width: `${uploadProgress}%` }}></div>
             </div>
           )}
-          {error && <p className="error-text">Error: {error}</p>}
+          {error && <p className="text-red-500 text-sm mt-2">Error: {error}</p>}
         </div>
         <div className="upload-ring">
           <div className="ring-glow"></div>
@@ -141,7 +139,7 @@ export function UploadZone() {
               <span className="file-name">{uploadedFile.name}</span>
               <span className="file-size">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</span>
             </header>
-            <p className="panel-subtitle">File uploaded successfully. Awaiting AI analysis...</p>
+            <p className="text-sm text-gray-400">File uploaded successfully. Awaiting AI analysis...</p>
           </div>
         </div>
       )}

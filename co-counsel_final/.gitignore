@@ -32,7 +32,6 @@ pytest-backend.xml
 
 # Misc
 .DS_Store
-._*
 Thumbs.db
 
 

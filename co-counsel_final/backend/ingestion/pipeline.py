@@ -140,13 +140,6 @@ def _process_loaded_document(
     categories = categorize_document(loaded.text, llm_service) # Use llm_service
     tags = tag_document(loaded.text, llm_service) # Use llm_service
 
-    vision_categories = _normalise_list(loaded.metadata.get("vision_categories"))
-    vision_labels = _normalise_list(loaded.metadata.get("vision_labels"))
-    if vision_categories:
-        categories = list(dict.fromkeys([*categories, *vision_categories]))
-    if vision_labels:
-        tags = list(dict.fromkeys([*tags, *vision_labels]))
-
     forensic_analysis_result = None
     crypto_tracing_result = None
 
@@ -179,16 +172,6 @@ def _process_loaded_document(
 def _split_nodes(splitter, document) -> Sequence[Any]:
     nodes = splitter.get_nodes_from_documents([document])
     return nodes
-
-
-def _normalise_list(value: object) -> List[str]:
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return [str(item) for item in value if str(item).strip()]
-    if isinstance(value, str):
-        return [item.strip() for item in value.split(",") if item.strip()]
-    return []
 
 
 __all__ = ["PipelineResult", "run_ingestion_pipeline"]

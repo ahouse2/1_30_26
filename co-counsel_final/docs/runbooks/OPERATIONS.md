@@ -18,9 +18,6 @@ Common Tasks
 - Restart service: docker compose --profile prod restart api
 - Rebuild API: docker compose --profile prod up -d --build api
 
-Module Runbooks
-- Full station-by-station operator guides: `docs/runbooks/modules/README.md`
-
 Court Integrations
 - Credentials are stored via Settings (UI or `PATCH /settings`) in encrypted storage.
 - Paid retrievals are recorded in `storage/court_payments/ledger.jsonl` (append-only).

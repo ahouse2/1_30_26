@@ -30,7 +30,6 @@ from backend.app.services.graph import GraphService
 from backend.app.forensics.bridge_registry import BridgeRegistry
 from backend.app.forensics.crypto_heuristics import match_bridge_transfers
 from backend.app.forensics.crypto_models import AddressRef, ChainRef, ClusterResult, ProvenanceRecord
-from backend.app.forensics.custodial_attribution import build_legal_process_record
 
 class WalletAddress(BaseModel):
     address: str
@@ -53,7 +52,6 @@ class CryptoTracingResult(BaseModel):
     transactions_traced: List[Transaction] = Field(default_factory=list)
     clusters: List[ClusterResult] = Field(default_factory=list)
     bridge_matches: List[Dict[str, Any]] = Field(default_factory=list)
-    custody_attribution: List[Dict[str, Any]] = Field(default_factory=list)
     visual_graph_mermaid: Optional[str] = Field(None, description="Mermaid diagram definition for the transaction graph.")
     details: str = Field(..., description="Summary of the crypto tracing analysis.")
 
@@ -111,15 +109,13 @@ class CryptoTracer:
         transactions = []
         clusters: List[ClusterResult] = []
         bridge_matches: List[Dict[str, Any]] = []
-        custody_attribution: List[Dict[str, Any]] = []
         
         if wallets:
             transactions = self._perform_on_chain_analysis(wallets)
             clusters = self._build_clusters(wallets, transactions)
             bridge_matches = self._build_bridge_matches(transactions)
-            custody_attribution = self._build_custody_attribution(document_id, wallets, transactions, clusters)
             if self.graph_service and self.enable_graph:
-                self._upsert_graph(document_id, wallets, transactions, clusters, bridge_matches, custody_attribution)
+                self._upsert_graph(document_id, wallets, transactions, clusters, bridge_matches)
         
         mermaid_graph = self._generate_graph_data(document_id, wallets, transactions)
 
@@ -128,8 +124,6 @@ class CryptoTracer:
             details += f" Traced {len(transactions)} transactions."
         if clusters:
             details += f" Built {len(clusters)} clusters."
-        if custody_attribution:
-            details += f" Derived {len(custody_attribution)} custody attribution lead(s)."
         if not wallets and not transactions:
             details = "No cryptocurrency activity detected."
 
@@ -138,7 +132,6 @@ class CryptoTracer:
             transactions_traced=transactions,
             clusters=clusters,
             bridge_matches=bridge_matches,
-            custody_attribution=custody_attribution,
             visual_graph_mermaid=mermaid_graph,
             details=details,
         )
@@ -345,72 +338,6 @@ class CryptoTracer:
             )
         return matches
 
-    def _build_custody_attribution(
-        self,
-        case_id: str,
-        wallets: List[WalletAddress],
-        transactions: List[Transaction],
-        clusters: List[ClusterResult],
-    ) -> List[Dict[str, Any]]:
-        if not wallets:
-            return []
-        tx_by_wallet: Dict[str, List[Transaction]] = defaultdict(list)
-        for tx in transactions:
-            tx_by_wallet[tx.sender].append(tx)
-            tx_by_wallet[tx.receiver].append(tx)
-
-        cluster_membership: Dict[str, str] = {}
-        for cluster in clusters:
-            for address in cluster.addresses:
-                cluster_membership[address.address] = cluster.cluster_id
-
-        leads: List[Dict[str, Any]] = []
-        for wallet in wallets:
-            wallet_txs = tx_by_wallet.get(wallet.address, [])
-            if not wallet_txs:
-                continue
-            total_amount = sum(max(tx.amount, 0.0) for tx in wallet_txs)
-            observed_tokens = sorted({tx.currency.upper() for tx in wallet_txs})
-            exchange = None
-            confidence = 0.42
-            signals: List[str] = []
-
-            if any(token in {"USDC", "USD", "ETH"} for token in observed_tokens) and total_amount >= 1000:
-                exchange = "Coinbase"
-                confidence = 0.62
-                signals.append("token_profile_usdc_eth")
-                signals.append("high_value_flow")
-            elif any(token in {"BTC", "ETH"} for token in observed_tokens):
-                exchange = "Coinbase Pro"
-                confidence = 0.55
-                signals.append("token_profile_btc_eth")
-
-            if exchange is None:
-                exchange = "Unclassified Custodian"
-                signals.append("insufficient_pattern_match")
-
-            process = build_legal_process_record(
-                exchange=exchange,
-                case_id=case_id,
-                notes=f"Auto-attribution from {len(wallet_txs)} traced txs",
-            )
-            leads.append(
-                {
-                    "wallet": wallet.address,
-                    "blockchain": wallet.blockchain,
-                    "exchange": exchange,
-                    "confidence": round(confidence, 3),
-                    "tx_count": len(wallet_txs),
-                    "total_amount_observed": round(total_amount, 6),
-                    "tokens": observed_tokens,
-                    "cluster_id": cluster_membership.get(wallet.address),
-                    "signals": signals,
-                    "legal_process": process,
-                }
-            )
-        leads.sort(key=lambda item: (float(item.get("confidence", 0)), float(item.get("total_amount_observed", 0))), reverse=True)
-        return leads[:25]
-
     def _upsert_graph(
         self,
         document_id: str,
@@ -418,7 +345,6 @@ class CryptoTracer:
         transactions: List[Transaction],
         clusters: List[ClusterResult],
         bridge_matches: List[Dict[str, Any]],
-        custody_attribution: List[Dict[str, Any]],
     ) -> None:
         if not self.graph_service:
             return
@@ -470,35 +396,6 @@ class CryptoTracer:
             for match in bridge_matches:
                 bridge_id = f"bridge::{match.get('bridge') or 'unknown'}"
                 self.graph_service.upsert_entity(bridge_id, "Bridge", {"name": match.get("bridge")})
-        for lead in custody_attribution:
-            wallet_id = self._wallet_node_id(
-                WalletAddress(
-                    address=str(lead.get("wallet")),
-                    blockchain=str(lead.get("blockchain") or "unknown"),
-                    currency="N/A",
-                    is_valid=True,
-                )
-            )
-            exchange_name = str(lead.get("exchange") or "Unknown")
-            exchange_id = f"exchange::{exchange_name.lower().replace(' ', '_')}"
-            self.graph_service.upsert_entity(
-                exchange_id,
-                "Custodian",
-                {
-                    "name": exchange_name,
-                    "confidence": lead.get("confidence"),
-                },
-            )
-            self.graph_service.merge_relation(
-                wallet_id,
-                "POSSIBLY_CUSTODIED_BY",
-                exchange_id,
-                {
-                    "confidence": lead.get("confidence"),
-                    "source": "custody_attribution",
-                    "signals": ",".join(lead.get("signals", [])),
-                },
-            )
 
     def _generate_graph_data(
         self,

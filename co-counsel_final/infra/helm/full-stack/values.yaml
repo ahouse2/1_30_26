@@ -82,7 +82,7 @@ qdrant:
   resources: {}
 
 stt:
-  image: linuxserver/faster-whisper:latest
+  image: ghcr.io/guillaumekln/faster-whisper-server:latest
   model: openai/whisper-large-v2
   device: cpu
   beamSize: 5

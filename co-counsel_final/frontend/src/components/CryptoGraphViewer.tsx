@@ -18,21 +18,21 @@ const CryptoGraphViewer: React.FC<CryptoGraphViewerProps> = ({ mermaidDefinition
       }).catch(error => {
         console.error("Mermaid rendering failed:", error);
         if (mermaidRef.current) {
-          mermaidRef.current.innerHTML = `<p class="error-text">Failed to render graph: ${error.message}</p>`;
+          mermaidRef.current.innerHTML = `<p class="text-red-500">Failed to render graph: ${error.message}</p>`;
         }
       });
     }
   }, [mermaidDefinition]);
 
   return (
-    <div className="crypto-graph-viewer">
-      <h3>Cryptocurrency Transaction Graph</h3>
+    <div className="p-4 border rounded-lg shadow-sm bg-gray-50">
+      <h3 className="text-lg font-semibold mb-2">Cryptocurrency Transaction Graph</h3>
       {mermaidDefinition ? (
-        <div ref={mermaidRef} className="mermaid-graph">
+        <div ref={mermaidRef} className="mermaid-graph overflow-auto">
           {/* Mermaid diagram will be rendered here */}
         </div>
       ) : (
-        <p className="panel-subtitle">No graph definition available.</p>
+        <p className="text-sm text-gray-600">No graph definition available.</p>
       )}
     </div>
   );

@@ -24,8 +24,6 @@ interface Graph3DSceneProps {
   nodes: GraphNode[]
   onNodeClick?: (node: GraphNode) => void
   className?: string
-  autoOrbit?: boolean
-  activeNodeId?: string | null
 }
 
 const Node: React.FC<{
@@ -120,23 +118,19 @@ const Node: React.FC<{
 const Connection: React.FC<{
   start: GraphNode
   end: GraphNode
-  activeNodeId?: string | null
-}> = ({ start, end, activeNodeId }) => {
+}> = ({ start, end }) => {
   const points = React.useMemo(() => [
     new THREE.Vector3(start.x, start.y, start.z),
     new THREE.Vector3(end.x, end.y, end.z)
   ], [start, end])
 
-  const active =
-    Boolean(activeNodeId) && (start.id === activeNodeId || end.id === activeNodeId)
-
   return (
     <Line
       points={points}
-      color={active ? "#18cafe" : "#383b44"}
+      color="#383b44"
       lineWidth={1.5}
       transparent={true}
-      opacity={active ? 0.95 : 0.45}
+      opacity={0.7}
     />
   )
 }
@@ -144,26 +138,20 @@ const Connection: React.FC<{
 const Graph3DScene: React.FC<Graph3DSceneProps> = ({ 
   nodes, 
   onNodeClick = () => {},
-  className,
-  autoOrbit = false,
-  activeNodeId = null,
+  className 
 }) => {
-  // Build a deduplicated edge list for cleaner rendering.
+  // Create connections between nodes
   const connections = React.useMemo(() => {
-    const dedup = new Set<string>()
-    const lines: { start: GraphNode; end: GraphNode }[] = []
+    const connections: { start: GraphNode; end: GraphNode }[] = []
     nodes.forEach(node => {
       node.connections.forEach(connectionId => {
         const connectedNode = nodes.find(n => n.id === connectionId)
         if (connectedNode) {
-          const key = [node.id, connectedNode.id].sort().join('::')
-          if (dedup.has(key)) return
-          dedup.add(key)
-          lines.push({ start: node, end: connectedNode })
+          connections.push({ start: node, end: connectedNode })
         }
       })
     })
-    return lines
+    return connections
   }, [nodes])
 
   return (
@@ -199,7 +187,7 @@ const Graph3DScene: React.FC<Graph3DSceneProps> = ({
         
         {/* Render connections first so they appear behind nodes */}
         {connections.map((conn, index) => (
-          <Connection key={index} start={conn.start} end={conn.end} activeNodeId={activeNodeId} />
+          <Connection key={index} start={conn.start} end={conn.end} />
         ))}
         
         {/* Render nodes */}
@@ -215,8 +203,6 @@ const Graph3DScene: React.FC<Graph3DSceneProps> = ({
           enablePan={true}
           enableZoom={true}
           enableRotate={true}
-          autoRotate={autoOrbit}
-          autoRotateSpeed={0.65}
         />
       </Canvas>
     </motion.div>

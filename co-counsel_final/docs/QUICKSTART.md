@@ -21,67 +21,18 @@ GEMINI_API_KEY=...
 2) Start services (one-click prod):
 ```
 ./scripts/run-prod.sh
-
-Full production stack (includes voice profile):
-./scripts/run-prod-full.sh
-
-Operational smoke report (exports markdown + json to logs/build_logs):
-./scripts/smoke-operational.sh
-```
-Provider support (implemented):
-- Gemini
-- OpenAI
-- OpenRouter
-- LocalAI
-- LM Studio
-- Ollama
-- Hugging Face
-
-Provider config examples:
-```
-# OpenRouter (chat)
-MODEL_PROVIDERS_PRIMARY=openrouter
-DEFAULT_CHAT_MODEL=openrouter/anthropic/claude-3.5-sonnet
-
-# Ollama (local chat)
-MODEL_PROVIDERS_PRIMARY=ollama
-DEFAULT_CHAT_MODEL=llama3.1
-OLLAMA_BASE_URL=http://localhost:11434
-
-# LocalAI (OpenAI-compatible local endpoint)
-MODEL_PROVIDERS_PRIMARY=localai
-DEFAULT_CHAT_MODEL=localai/gpt-4o-mini
-LOCALAI_BASE_URL=http://localhost:8080/v1
-
-# Hugging Face embeddings
-MODEL_PROVIDERS_PRIMARY=huggingface
-DEFAULT_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ```
 Optional flags:
 ```
 ./scripts/run-prod.sh --no-seed --data-dir "/path/to/case-data" --e2e
-API_BASE_URL=http://localhost:8000 CASE_ID=CASE-042 ./scripts/smoke-operational.sh
-# Include auth for protected endpoints (query/timeline):
-AUTH_BEARER_TOKEN=<jwt> API_BASE_URL=http://localhost:8000 CASE_ID=CASE-042 ./scripts/smoke-operational.sh
 ```
 Enable optional voice services (stt/tts):
 ```
 ./scripts/run-prod.sh --voice
 ```
-Override voice images if needed:
-```
-STT_IMAGE=linuxserver/faster-whisper:latest TTS_IMAGE=rhasspy/larynx:latest TTS_BACKEND=local ./scripts/run-prod.sh --voice
-```
-If you still have an old `ghcr.io/guillaumekln/faster-whisper-server:*` override in your shell/env, startup now auto-corrects it to `linuxserver/faster-whisper:latest`.
-
 Voice profile details:
 - STT runs from `linuxserver/faster-whisper:latest` (host `:9000` -> container `:10300`)
-- TTS defaults to local Coqui for more natural voice (`TTS_BACKEND=local`).
-- You can still run `rhasspy/larynx:latest` by setting `TTS_BACKEND=remote`.
-Observability alert probe:
-```
-python tools/monitoring/slo_alert_probe.py --metrics-url http://localhost:9464/metrics
-```
+- TTS runs from `rhasspy/larynx:latest` (default voice `en-us-blizzard_lessac`, female)
 3) Run backend locally (once scaffolded)
 ```
 uv run python -m api
@@ -102,6 +53,3 @@ npm run dev
 - Manually run a stage via `POST /api/ingestion/{job_id}/stage/{stage}/run` with `{ "resume_downstream": true }`
 - Ask a question via `GET /query?q=...` and verify citations
 - Retrieve forensics reports via `/forensics/document?id=...` and `/forensics/image?id=...`
-
-## Module Runbooks
-- Station-by-station operating guides live in `docs/runbooks/modules/README.md`

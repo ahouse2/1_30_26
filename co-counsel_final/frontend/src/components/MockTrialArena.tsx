@@ -44,26 +44,23 @@ export function MockTrialArena() {
 
   return (
     <motion.div
-      className="mock-trial-arena"
+      className="bg-[#1a1a1f] rounded-xl p-6 border border-[#2a2a2f] backdrop-blur-md shadow-[0_0_20px_#ff000088]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.4, ease: 'easeOut' }}
+      transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
     >
-      <header>
-        <h2>Mock Trial Arena</h2>
-        <p className="panel-subtitle">Interactive scenario drills and courtroom rehearsals.</p>
-      </header>
+      <h2 className="text-lg font-medium mb-2">Mock Trial Arena</h2>
       {loading && <span>Loading Scenarios...</span>}
-      {error && <span className="error-text">Error: {error}</span>}
+      {error && <span className="text-red-500">Error: {error}</span>}
       {!loading && !error && scenarios.length > 0 && (
-        <div className="mock-trial-arena__select">
-          <h3>Available Scenarios</h3>
+        <div className="scenario-selection">
+          <h3>Available Scenarios:</h3>
           <select
             onChange={(e) => {
               const scenarioId = e.target.value;
-              setSelectedScenario(scenarios.find((s) => s.id === scenarioId) || null);
+              setSelectedScenario(scenarios.find(s => s.id === scenarioId) || null);
             }}
-            className="input-cinematic"
+            className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
           >
             <option value="">Select a Scenario</option>
             {scenarios.map((scenario) => (
@@ -73,19 +70,24 @@ export function MockTrialArena() {
             ))}
           </select>
           {selectedScenario && (
-            <div className="mock-trial-arena__detail">
+            <div className="mt-4 p-4 bg-gray-800 rounded">
               <h4>{selectedScenario.name}</h4>
               <p>{selectedScenario.description}</p>
-              <button onClick={handleRunScenario} className="btn-cinematic">
+              <button
+                onClick={handleRunScenario}
+                className="mt-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+              >
                 Run Scenario
               </button>
             </div>
           )}
         </div>
       )}
-      {!loading && !error && scenarios.length === 0 && <span>No scenarios available.</span>}
+      {!loading && !error && scenarios.length === 0 && (
+        <span>No scenarios available.</span>
+      )}
 
-      <div className="mock-trial-arena__footnote">Live video + transcript stream (placeholder)</div>
+      <div className="mt-4 text-xs text-gray-400">Live video + transcript stream (placeholder)</div>
     </motion.div>
   );
 }

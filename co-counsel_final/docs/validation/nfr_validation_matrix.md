@@ -28,7 +28,6 @@ This playbook codifies the hardware assumptions, synthetic load profiles, and va
 | Provider Policy | Fallback error rate | \<=1% | `tools/monitoring/provider_mix_check.py` (inspect non-success entries) | Same as above |
 | Observability | Retrieval telemetry coverage | Spans + metrics exported (`retrieval_query_duration_ms`, `retrieval_results_returned`, `retrieval_queries_total`) | OTLP dashboard `retrieval-latency` | Enable telemetry env vars then `pytest backend/tests/test_telemetry.py -q` |
 | Observability | Forensics telemetry coverage | Stage spans + metrics (`forensics_pipeline_duration_ms`, `forensics_stage_duration_ms`, `forensics_reports_total`) | OTLP dashboard `forensics-pipeline` | Enable telemetry env vars then `pytest backend/tests/test_telemetry.py -q` |
-| Observability | Alert threshold probe | p95 retrieval <= 1800 ms, forensics fallback total <= 5 | `tools/monitoring/slo_alert_probe.py` output log | `python tools/monitoring/slo_alert_probe.py --metrics-url http://otel-collector:9464/metrics` |
 
 ## Offline Tolerance
 1. Start the stack: `docker compose --profile prod up -d`.
