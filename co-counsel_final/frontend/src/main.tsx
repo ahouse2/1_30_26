@@ -5,6 +5,7 @@ import { SettingsProvider } from './context/SettingsContext';
 import { QueryProvider } from './context/QueryContext';
 import { ScenarioProvider } from './context/ScenarioContext';
 import { DevTeamProvider } from './context/DevTeamContext';
+import { ActiveCaseProvider } from './context/ActiveCaseContext';
 import './styles/index.css';
 import { registerServiceWorker } from './utils/serviceWorkerRegistration';
 
@@ -40,11 +41,13 @@ ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <SettingsProvider>
       <QueryProvider>
-        <ScenarioProvider>
-          <DevTeamProvider>
-            <App />
-          </DevTeamProvider>
-        </ScenarioProvider>
+        <ActiveCaseProvider>
+          <ScenarioProvider>
+            <DevTeamProvider>
+              <App />
+            </DevTeamProvider>
+          </ScenarioProvider>
+        </ActiveCaseProvider>
       </QueryProvider>
     </SettingsProvider>
   </React.StrictMode>

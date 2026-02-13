@@ -59,7 +59,7 @@ const KnowledgeGraphViewer: React.FC = () => {
       network.on("click", (properties) => {
         if (properties.nodes.length > 0) {
           const nodeId = properties.nodes[0];
-          const clickedNode = nodes.get(nodeId) as GraphNode;
+          const clickedNode = nodes.get(nodeId as string);
           if (clickedNode) {
             toast({
               title: `Node: ${clickedNode.label}`,
@@ -138,47 +138,47 @@ const KnowledgeGraphViewer: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <span className="ml-2 text-gray-400">Loading knowledge graph...</span>
+      <div className="knowledge-graph__loading">
+        <Loader2 className="spinner-icon" />
+        <span>Loading knowledge graph...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-full text-red-500">
+      <div className="evidence-viewer__state error-text">
         <p>{error}</p>
       </div>
     );
-    }
+  }
 
   return (
-    <div className="p-6 bg-gray-900 min-h-screen text-gray-100">
-      <Card className="bg-gray-800 border-gray-700 shadow-lg">
-        <CardHeader className="border-b border-gray-700">
-          <CardTitle className="flex items-center text-blue-400">
-            <GitGraph className="mr-2 h-6 w-6" /> Knowledge Graph Visualization
+    <div className="knowledge-graph">
+      <Card className="knowledge-graph__card">
+        <CardHeader className="knowledge-graph__header">
+          <CardTitle className="knowledge-graph__title">
+            <GitGraph className="knowledge-graph__icon" /> Knowledge Graph Visualization
           </CardTitle>
-          <p className="text-sm text-gray-400">Explore entities and their relationships.</p>
+          <p className="knowledge-graph__subtitle">Explore entities and their relationships.</p>
         </CardHeader>
-        <CardContent className="pt-6">
-          <div className="flex space-x-2 mb-4">
+        <CardContent className="knowledge-graph__content">
+          <div className="knowledge-graph__toolbar">
             <Input
               type="text"
               placeholder="Search for a node ID..."
               value={searchNodeId}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchNodeId(e.target.value)}
-              className="flex-grow bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400"
+              className="knowledge-graph__input"
             />
-            <Button onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700 text-white">
-              <Search className="mr-2 h-4 w-4" /> Search
+            <Button onClick={handleSearch} className="knowledge-graph__button">
+              <Search className="knowledge-graph__button-icon" /> Search
             </Button>
-            <Button onClick={() => { setSearchNodeId(''); fetchGraphData(); }} variant="outline" className="text-gray-300 border-gray-600 hover:bg-gray-700">
+            <Button onClick={() => { setSearchNodeId(''); fetchGraphData(); }} variant="outline" className="knowledge-graph__button ghost">
               Reset View
             </Button>
           </div>
-          <div ref={networkRef} className="w-full h-[700px] border border-gray-700 rounded-md bg-gray-900" />
+          <div ref={networkRef} className="knowledge-graph__canvas" />
         </CardContent>
       </Card>
     </div>

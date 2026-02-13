@@ -75,6 +75,16 @@ class OcrConfig:
 
 
 @dataclass(frozen=True)
+class VisionConfig:
+    """Vision model configuration for image understanding."""
+
+    endpoint: Optional[str] = None
+    model: Optional[str] = None
+    api_key: Optional[str] = None
+    prompt: str = "Describe the image and provide tags."
+
+
+@dataclass(frozen=True)
 class LlmConfig:
     """LLM backend selection and parameters for text generation."""
 
@@ -102,6 +112,7 @@ class LlamaIndexRuntimeConfig:
     cost_mode: IngestionCostMode
     embedding: EmbeddingConfig
     ocr: OcrConfig
+    vision: VisionConfig
     llm: LlmConfig # Added LLM configuration
     tuning: PipelineTuning
     workspace_dir: Path
@@ -193,6 +204,15 @@ def build_ocr_config(settings: "Settings") -> OcrConfig:
     )
 
 
+def build_vision_config(settings: "Settings") -> VisionConfig:
+    return VisionConfig(
+        endpoint=settings.ingestion_vision_endpoint,
+        model=settings.ingestion_vision_model,
+        api_key=settings.ingestion_vision_api_key,
+        prompt=settings.ingestion_vision_prompt,
+    )
+
+
 def build_llm_config(settings: "Settings") -> LlmConfig:
     mode = resolve_cost_mode(settings.ingestion_cost_mode)
     if mode is IngestionCostMode.COMMUNITY:
@@ -237,6 +257,7 @@ def build_runtime_config(settings: "Settings") -> LlamaIndexRuntimeConfig:
         cost_mode=resolve_cost_mode(settings.ingestion_cost_mode),
         embedding=build_embedding_config(settings),
         ocr=build_ocr_config(settings),
+        vision=build_vision_config(settings),
         llm=build_llm_config(settings), # Added LLM configuration
         tuning=build_pipeline_tuning(settings),
         workspace_dir=settings.ingestion_workspace_dir,
@@ -254,11 +275,13 @@ __all__ = [
     "LlamaIndexRuntimeConfig",
     "OcrConfig",
     "OcrProvider",
+    "VisionConfig",
     "LlmConfig", # Added
     "LlmProvider", # Added
     "PipelineTuning",
     "build_embedding_config",
     "build_ocr_config",
+    "build_vision_config",
     "build_llm_config", # Added
     "build_pipeline_tuning",
     "build_runtime_config",

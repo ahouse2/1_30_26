@@ -35,3 +35,116 @@
 - Tests:
   - `PYTHONPATH=/Volumes/MAC_DEV/REPOS/2-4-26_tree/co-counsel_final/tools:/Volumes/MAC_DEV/REPOS/2-4-26_tree/co-counsel_final pytest backend/tests/test_ingestion_upload_api.py backend/tests/test_upload_service.py -q`
   - `cd frontend && npx vitest run tests/documentApiUpload.test.ts tests/uploadEvidencePage.test.tsx`
+
+## 2026-02-10 (Additional)
+- Removed AppleDouble files (`._*`) to avoid Docker build xattr failures.
+- Added `.dockerignore` for backend/frontend to ignore OS artifacts, caches, and storage folders.
+- Updated Service of Process UI styling to match ref7–ref13 halo/glass theme.
+- Forced STT/TTS image defaults in `scripts/start-stack-full.sh` to stabilize voice pulls.
+- Added graph query builder UI + styling in Graph Explorer.
+- Added local Coqui TTS backend and `TTS_BACKEND` env (default local for natural voice).
+- Added ingestion vision analyzer to classify images and enrich tags/categories.
+
+## 2026-02-11 (Operational Readiness Stabilization)
+- Fixed `frontend-prod` healthcheck false negatives by switching compose probe from `http://localhost/` to `http://127.0.0.1/`.
+- Hardened Neo4j defaults in compose to avoid invalid password fallback (`securepassword` default for API + Neo4j env).
+- Improved startup script reliability:
+  - `scripts/start-stack-full.sh` now defaults `DATA_DIR` to empty (no noisy missing-folder ingestion warnings).
+  - Added Neo4j readiness polling before seed execution to avoid race-condition skips.
+- Fixed graph explorer query-path/runtime mismatch:
+  - `GraphExplorerPanel` now sends `cypher_query` as query parameter (matching backend FastAPI signature).
+  - Added nginx proxy route for `/knowledge-graph/` so graph calls do not fall through to SPA HTML.
+- Cleared macOS AppleDouble files (`._*`) that were breaking Docker build contexts.
+- Verification:
+  - `./scripts/run-prod.sh --no-seed` completes.
+  - `docker compose --profile prod ps` shows API and frontend healthy.
+  - `curl http://localhost:8000/docs` and `curl http://localhost/` succeed.
+  - `npm -C frontend run build` succeeds.
+- 2026-02-11 (Strategy Argument Mapping)
+  - Replaced static argument-map content in `ResearchStrategyHubPage` with dynamic map derivation from live swarm/index outputs and citations.
+  - Added `Refresh Map` control to re-synthesize Position/Counter/Evidence lanes without rerunning all queries.
+  - Validation: `npm -C frontend run build` succeeded.
+- 2026-02-11 (Graph Query Citation Polish)
+  - Extended `GraphExplorerPanel` query results with structured citation highlights extracted from relationship evidence/doc metadata.
+  - Added clickable citation rows with source/confidence tags and modal handoff to `DocumentViewerPanel`.
+  - Styled new query citation rows in `frontend/src/styles/index.css` for the halo/cinematic UI theme.
+  - Validation: `npm -C frontend run build` succeeded.
+  - Screenshot: `logs/ui_screenshots/analytics-graph-citations-2026-02-11.png`.
+- 2026-02-11 (Ingestion UX Vertical Slice)
+  - Upgraded `UploadEvidencePage` into ingestion command console with source-mode selector (single file/folder + connector placeholders), resilient folder upload progress, failed-file retry, and live validation report sourced from `status_details`.
+  - Extended `IngestionPipelinePanel` with stage-status display and safe stage-run error handling.
+  - Expanded ingestion status typing in `frontend/src/services/document_api.ts` for stage metadata + graph/community + automation details.
+  - Validation:
+    - `npm -C frontend run build` succeeded.
+    - `npm -C frontend run -s test -- tests/ingestionPipelinePanel.test.tsx tests/uploadEvidencePage.test.tsx` passed.
+  - Screenshot: `logs/ui_screenshots/upload-ingestion-console-2026-02-11.png`.
+- 2026-02-12 (Graph Cinematic + Panel Polish)
+  - Added Graph Explorer cinematic control upgrades in `frontend/src/components/graph-explorer`:
+    - `Graph3DScene` now supports deduplicated edge rendering, active-node edge highlighting, and auto-orbit camera toggle.
+    - `GraphExplorerPanel` now includes live graph-refinement worker status (`running/idle`, idle counters, limits, interval), plus refresh/restart controls.
+  - Strengthened panel usability:
+    - Timeline now shows clickable active-filter chips for fast, per-filter clear actions.
+    - In-Court Presentation adds presenter cue templates and note export.
+    - Research/Strategy adds per-panel `Copy Brief` action that packages swarm output, index output, and argument map.
+  - Frontend type/runtime stabilization:
+    - Added `IngestionResponse` type in `document_api`.
+    - Fixed `Avatar`/chat ref typing and `Progress` `indicatorColor` prop compatibility.
+    - Added OTLP exporter module declaration for TypeScript.
+  - Verification:
+    - `cd frontend && npx tsc --noEmit` succeeded.
+    - `cd frontend && npm run -s build` succeeded.
+    - `cd frontend && npx vitest run src/components/graph-explorer/__tests__/GraphExplorerPanel.test.tsx tests/ingestionPipelinePanel.test.tsx tests/uploadEvidencePage.test.tsx` passed (with non-blocking React `act(...)` warnings in graph panel test).
+- 2026-02-12 (Court Sync + Timeline Export Readiness)
+  - Added `Court Sync Desk` to CENTCOM with live provider health polling (`PACER`, `UniCourt`, `LACS`, etc.) and a deadline radar fed from timeline motion deadlines.
+  - New CENTCOM wiring in `frontend/src/pages/CentcomWarRoomPage.tsx`:
+    - provider refresh via `fetchCourtProviderStatus()`
+    - deadline refresh via `fetchTimeline({ motion_due_after: now })`
+    - nearest deadline highlight + upcoming deadline list
+  - Added supporting styles for court sync cards and lists in `frontend/src/styles/index.css`.
+  - Improved timeline export operational clarity in `frontend/src/components/TimelineView.tsx`:
+    - storyboard readiness status badge/hint in Export Center
+    - export buttons gated while storyboard generation is incomplete in Story Mode
+  - Verification:
+    - `cd frontend && npx tsc --noEmit` succeeded.
+    - `cd frontend && npm run -s build` succeeded.
+    - `cd frontend && npx vitest run tests/ingestionPipelinePanel.test.tsx tests/uploadEvidencePage.test.tsx src/components/graph-explorer/__tests__/GraphExplorerPanel.test.tsx` passed (graph panel test still emits non-blocking `act(...)` warnings).
+- 2026-02-12 (Ingestion Control Hardening + Voice Preference Wiring)
+  - Replaced `IngestionPipelinePanel` with an operational control console:
+    - stage-by-stage status + trigger controls with per-stage running state
+    - failure recovery visibility, warnings, skipped input list, and automation status block
+    - ingest/timeline/graph/forensics metric cards for quick readiness checks
+  - Added persistent preferred voice selection in `SettingsPanel` (Appearance tab):
+    - loads real voice personas from `/voice/personas` with a safe fallback list
+    - stores preference under `co-counsel.voice.profile`
+  - Wired preferred voice into live playback surfaces:
+    - `Avatar` TTS requests now use saved voice profile (instead of hardcoded `aurora`)
+    - `useVoiceSession` initializes persona from the same saved profile and persists changes
+  - Updated live planning checklists:
+    - marked Trial University interactive onboarding complete
+    - marked Voice-enabled assistant UI complete
+  - Verification:
+    - `cd frontend && npx tsc --noEmit --pretty false` succeeded.
+    - `cd frontend && npm run -s build` succeeded.
+- 2026-02-12 (Graph Snapshot + Diff Vertical Slice)
+  - Added backend snapshot persistence service in `backend/app/services/graph_snapshots.py`:
+    - case-aware graph snapshot creation from current overview/subgraph
+    - snapshot listing and retrieval from `storage/workflows/graph_snapshots`
+    - structural diffing between snapshots (added/removed/modified nodes + edges)
+  - Extended graph API in `backend/app/api/graph.py`:
+    - `POST /graph/snapshots`
+    - `GET /graph/snapshots`
+    - `GET /graph/snapshots/{snapshot_id}`
+    - `POST /graph/snapshots/diff`
+  - Added graph snapshot request/response models in `backend/app/models/api.py`.
+  - Added frontend graph snapshot client methods in `frontend/src/services/graph_api.ts`.
+  - Added UI controls in `frontend/src/components/graph-explorer/GraphExplorerPanel.tsx`:
+    - create snapshot
+    - list/select baseline + candidate snapshots
+    - run diff and render summary metrics
+  - Checklist updates:
+    - Marked "Case-specific graph snapshots and diffing" complete in both live and master plans.
+  - Verification:
+    - `python -m py_compile backend/app/services/graph_snapshots.py backend/app/api/graph.py backend/app/models/api.py` succeeded.
+    - `cd frontend && npx tsc --noEmit --pretty false` succeeded.
+    - `cd frontend && npm run -s build` succeeded.
+    - `pytest backend/tests/test_graph_snapshot_api.py -q` blocked by missing optional runtime dependency `soundfile` during app import.

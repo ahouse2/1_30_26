@@ -98,116 +98,124 @@ const LegalDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-full">
-        <BarChart className="h-8 w-8 animate-spin text-blue-500" />
-        <span className="ml-2 text-gray-400">Loading legal dashboard...</span>
+      <div className="legal-dashboard__loading">
+        <BarChart className="spinner-icon" />
+        <span>Loading legal dashboard...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-full text-red-500">
+      <div className="evidence-viewer__state error-text">
         <p>{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-gray-900 min-h-screen text-gray-100">
-      <Card className="bg-gray-800 border-gray-700 shadow-lg">
-        <CardHeader className="border-b border-gray-700">
-          <CardTitle className="flex items-center text-blue-400">
-            <Scale className="mr-2 h-6 w-6" /> Legal Theory & Strategy Dashboard
+    <section className="legal-dashboard">
+      <Card className="legal-dashboard__card">
+        <CardHeader className="legal-dashboard__header">
+          <CardTitle className="legal-dashboard__title">
+            <Scale className="legal-dashboard__icon" /> Legal Theory & Strategy Dashboard
           </CardTitle>
-          <p className="text-sm text-gray-400">Insights for case outcomes and strategic planning.</p>
+          <p className="legal-dashboard__subtitle">Insights for case outcomes and strategic planning.</p>
         </CardHeader>
-        <CardContent className="pt-6">
-          <Tabs defaultValue="theory" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-gray-700">
-              <TabsTrigger value="theory">Legal Theory</TabsTrigger>
-              <TabsTrigger value="predictive">Predictive Analytics</TabsTrigger>
-              <TabsTrigger value="strategic">Strategic Recommendations</TabsTrigger>
+        <CardContent className="legal-dashboard__content">
+          <Tabs defaultValue="theory" className="legal-tabs">
+            <TabsList className="legal-tabs__list">
+              <TabsTrigger value="theory" className="legal-tabs__trigger">Legal Theory</TabsTrigger>
+              <TabsTrigger value="predictive" className="legal-tabs__trigger">Predictive Analytics</TabsTrigger>
+              <TabsTrigger value="strategic" className="legal-tabs__trigger">Strategic Recommendations</TabsTrigger>
             </TabsList>
-            <TabsContent value="theory" className="mt-4">
-              <Card className="bg-gray-900 border-gray-700">
+            <TabsContent value="theory" className="legal-tabs__panel">
+              <Card className="legal-panel">
                 <CardHeader>
-                  <CardTitle className="flex items-center text-green-400"><Lightbulb className="mr-2 h-5 w-5" /> Legal Theory Summary</CardTitle>
+                  <CardTitle className="legal-panel__title">
+                    <Lightbulb className="legal-panel__icon" /> Legal Theory Summary
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-gray-200 mb-4">{strategyBrief?.summary}</p>
-                  <h4 className="text-lg font-semibold text-gray-300">Focus Nodes:</h4>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                <CardContent className="legal-panel__body">
+                  <p className="legal-panel__summary">{strategyBrief?.summary}</p>
+                  <h4 className="legal-panel__heading">Focus Nodes:</h4>
+                  <div className="legal-chip-grid">
                     {strategyBrief?.focus_nodes.map(node => (
-                      <Badge key={node.id} variant="outline" className="bg-blue-600 text-white border-blue-600">
+                      <Badge key={node.id} variant="outline" className="legal-chip">
                         {node.label} ({node.type})
                       </Badge>
                     ))}
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-300 mt-4">Contradictions:</h4>
-                  <ScrollArea className="h-[150px] w-full rounded-md border border-gray-700 p-4 bg-gray-800 mt-2">
+                  <h4 className="legal-panel__heading">Contradictions:</h4>
+                  <ScrollArea className="legal-scroll">
                     {strategyBrief?.contradictions && strategyBrief.contradictions.length > 0 ? (
-                      <ul className="list-disc pl-5 space-y-1 text-gray-200">
+                      <ul className="legal-bullet-list">
                         {strategyBrief.contradictions.map((contra, index) => (
                           <li key={index}>{contra.source.label} CONTRADICTS {contra.target.label}</li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-gray-400">No significant contradictions identified.</p>
+                      <p className="legal-empty">No significant contradictions identified.</p>
                     )}
                   </ScrollArea>
-                  <h4 className="text-lg font-semibold text-gray-300 mt-4">Leverage Points:</h4>
-                  <ScrollArea className="h-[150px] w-full rounded-md border border-gray-700 p-4 bg-gray-800 mt-2">
+                  <h4 className="legal-panel__heading">Leverage Points:</h4>
+                  <ScrollArea className="legal-scroll">
                     {strategyBrief?.leverage_points && strategyBrief.leverage_points.length > 0 ? (
-                      <ul className="list-disc pl-5 space-y-1 text-gray-200">
+                      <ul className="legal-bullet-list">
                         {strategyBrief.leverage_points.map((lp, index) => (
                           <li key={index}>{lp.node.label} (Influence: {lp.influence.toFixed(2)}, Connections: {lp.connections}) - {lp.reason}</li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-gray-400">No significant leverage points identified.</p>
+                      <p className="legal-empty">No significant leverage points identified.</p>
                     )}
                   </ScrollArea>
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="predictive" className="mt-4">
-              <Card className="bg-gray-900 border-gray-700">
+            <TabsContent value="predictive" className="legal-tabs__panel">
+              <Card className="legal-panel">
                 <CardHeader>
-                  <CardTitle className="flex items-center text-yellow-400"><TrendingUp className="mr-2 h-5 w-5" /> Predictive Outcome</CardTitle>
+                  <CardTitle className="legal-panel__title">
+                    <TrendingUp className="legal-panel__icon" /> Predictive Outcome
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-gray-200 mb-4">{predictiveOutcome?.summary}</p>
-                  <h4 className="text-lg font-semibold text-gray-300">Probabilities:</h4>
-                  <div className="space-y-3 mt-2">
+                <CardContent className="legal-panel__body">
+                  <p className="legal-panel__summary">{predictiveOutcome?.summary}</p>
+                  <h4 className="legal-panel__heading">Probabilities:</h4>
+                  <div className="legal-probabilities">
                     {predictiveOutcome?.probabilities && Object.entries(predictiveOutcome.probabilities).map(([outcome, prob]) => (
-                      <div key={outcome} className="flex items-center gap-2">
-                        <span className="w-24 text-gray-200 capitalize">{outcome}:</span>
-                        <Progress value={prob * 100} className="w-full h-3 bg-gray-700" indicatorColor={outcome === predictiveOutcome.predicted_outcome ? "bg-green-500" : "bg-blue-500"} />
-                        <span className="w-10 text-right text-gray-200">{(prob * 100).toFixed(1)}%</span>
+                      <div key={outcome} className="legal-prob-row">
+                        <span className="legal-prob-label">{outcome}:</span>
+                        <Progress value={prob * 100} className="legal-progress" indicatorColor={outcome === predictiveOutcome.predicted_outcome ? "bg-green-500" : "bg-blue-500"} />
+                        <span className="legal-prob-value">{(prob * 100).toFixed(1)}%</span>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="strategic" className="mt-4">
-              <Card className="bg-gray-900 border-gray-700">
+            <TabsContent value="strategic" className="legal-tabs__panel">
+              <Card className="legal-panel">
                 <CardHeader>
-                  <CardTitle className="flex items-center text-purple-400"><Lightbulb className="mr-2 h-5 w-5" /> Strategic Recommendations</CardTitle>
+                  <CardTitle className="legal-panel__title">
+                    <Lightbulb className="legal-panel__icon" /> Strategic Recommendations
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-gray-200 mb-4">Predicted Outcome: <Badge className="capitalize bg-green-600 text-white">{strategicRecommendations?.predicted_outcome}</Badge></p>
-                  <h4 className="text-lg font-semibold text-gray-300">Recommendations:</h4>
-                  <ScrollArea className="h-[300px] w-full rounded-md border border-gray-700 p-4 bg-gray-800 mt-2">
+                <CardContent className="legal-panel__body">
+                  <p className="legal-panel__summary">
+                    Predicted Outcome: <Badge className="legal-chip legal-chip--success">{strategicRecommendations?.predicted_outcome}</Badge>
+                  </p>
+                  <h4 className="legal-panel__heading">Recommendations:</h4>
+                  <ScrollArea className="legal-scroll legal-scroll--tall">
                     {strategicRecommendations?.recommendations && strategicRecommendations.recommendations.length > 0 ? (
-                      <ul className="list-disc pl-5 space-y-2 text-gray-200">
+                      <ul className="legal-bullet-list">
                         {strategicRecommendations.recommendations.map((rec, index) => (
                           <li key={index}>{rec}</li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-gray-400">No specific recommendations generated.</p>
+                      <p className="legal-empty">No specific recommendations generated.</p>
                     )}
                   </ScrollArea>
                 </CardContent>
@@ -216,7 +224,7 @@ const LegalDashboard: React.FC = () => {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
+    </section>
   );
 };
 

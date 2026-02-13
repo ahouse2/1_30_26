@@ -190,7 +190,7 @@ if [[ "${SKIP_MIGRATIONS}" == "false" ]]; then
   echo "Applying Neo4j migrations"
   for migration in "${INFRA_DIR}"/migrations/neo4j/*.cql; do
     [ -f "${migration}" ] || continue
-    docker compose "${COMPOSE_ARGS[@]}" exec -T neo4j cypher-shell -u neo4j -p "${NEO4J_PASSWORD:-securepassword}" -f "/var/lib/neo4j/migrations/$(basename "${migration}")"
+    docker compose "${COMPOSE_ARGS[@]}" exec -T neo4j cypher-shell -u neo4j -p "${NEO4J_PASSWORD:-securepassword}" -f "/migrations/$(basename "${migration}")"
   done
 
   echo "Applying Qdrant migrations"

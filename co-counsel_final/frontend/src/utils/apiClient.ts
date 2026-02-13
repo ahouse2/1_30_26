@@ -18,6 +18,7 @@ import {
   TimelineExportFormat,
   TimelineExportResponse,
   StoryboardResponse,
+  TimelineMediaHooksResponse,
   VoicePersona,
   VoiceSession,
   VoiceSessionResponse,
@@ -32,10 +33,7 @@ const BASE = (() => {
   if (typeof __API_BASE__ !== 'undefined' && __API_BASE__) {
     return __API_BASE__;
   }
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return '';
+  return 'http://localhost:8000';
 })();
 
 function withBase(path: string): string {
@@ -233,6 +231,8 @@ export async function fetchTimeline(
   params: {
     cursor?: string | null;
     entity?: string | null;
+    topic?: string | null;
+    source?: string | null;
     from_ts?: string | null;
     to_ts?: string | null;
     limit?: number;
@@ -244,6 +244,8 @@ export async function fetchTimeline(
   const search = new URLSearchParams();
   if (params.cursor) search.set('cursor', params.cursor);
   if (params.entity) search.set('entity', params.entity);
+  if (params.topic) search.set('topic', params.topic);
+  if (params.source) search.set('source', params.source);
   if (params.from_ts) search.set('from_ts', params.from_ts);
   if (params.to_ts) search.set('to_ts', params.to_ts);
   if (typeof params.limit === 'number') search.set('limit', String(params.limit));
@@ -261,6 +263,8 @@ export async function exportTimeline(payload: {
   format: TimelineExportFormat;
   case_id?: string | null;
   entity?: string | null;
+  topic?: string | null;
+  source?: string | null;
   from_ts?: string | null;
   to_ts?: string | null;
   risk_band?: 'low' | 'medium' | 'high' | null;
@@ -284,12 +288,16 @@ export async function fetchStoryboard(
     cursor?: string | null;
     limit?: number;
     entity?: string | null;
+    topic?: string | null;
+    source?: string | null;
     risk_band?: 'low' | 'medium' | 'high' | null;
   } = {}
 ): Promise<StoryboardResponse> {
   const search = new URLSearchParams();
   if (params.cursor) search.set('cursor', params.cursor);
   if (params.entity) search.set('entity', params.entity);
+  if (params.topic) search.set('topic', params.topic);
+  if (params.source) search.set('source', params.source);
   if (params.risk_band) search.set('risk_band', params.risk_band);
   if (typeof params.limit === 'number') search.set('limit', String(params.limit));
   const response = await fetch(withBase(`/timeline/storyboard?${search.toString()}`));
@@ -297,6 +305,30 @@ export async function fetchStoryboard(
     throw new Error(`Storyboard request failed (${response.status})`);
   }
   return (await response.json()) as StoryboardResponse;
+}
+
+export async function fetchTimelineMediaHooks(
+  params: {
+    cursor?: string | null;
+    limit?: number;
+    entity?: string | null;
+    topic?: string | null;
+    source?: string | null;
+    risk_band?: 'low' | 'medium' | 'high' | null;
+  } = {}
+): Promise<TimelineMediaHooksResponse> {
+  const search = new URLSearchParams();
+  if (params.cursor) search.set('cursor', params.cursor);
+  if (params.entity) search.set('entity', params.entity);
+  if (params.topic) search.set('topic', params.topic);
+  if (params.source) search.set('source', params.source);
+  if (params.risk_band) search.set('risk_band', params.risk_band);
+  if (typeof params.limit === 'number') search.set('limit', String(params.limit));
+  const response = await fetch(withBase(`/timeline/media-hooks?${search.toString()}`));
+  if (!response.ok) {
+    throw new Error(`Timeline media hook request failed (${response.status})`);
+  }
+  return (await response.json()) as TimelineMediaHooksResponse;
 }
 
 export async function fetchDevAgentBacklog(): Promise<DevAgentProposalListResponse> {

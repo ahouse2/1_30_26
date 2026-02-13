@@ -1,22 +1,22 @@
 import { LiveCoCounselChat } from '@/components/LiveCoCounselChat';
-import { Avatar } from '@/components/Avatar';
+import { Avatar, type AvatarHandle } from '@/components/Avatar';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useRef } from 'react';
 
 export default function LiveCoCounselChatPage() {
-  const avatarRef = useRef<{ speak: (text: string) => void }>(null);
+  const avatarRef = useRef<AvatarHandle>(null);
 
   return (
-    <div className="bg-background-canvas text-text-primary h-screen relative">
-      <div className="absolute inset-0 bg-black/20 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
+    <div className="live-chat-page">
+      <div className="live-chat-page__overlay" />
       <PanelGroup direction="horizontal">
         <Panel>
           <Avatar ref={avatarRef} />
         </Panel>
-        <PanelResizeHandle className="w-2 bg-border hover:bg-accent-cyan-500/50 transition-colors duration-medium" />
+        <PanelResizeHandle className="live-chat-resizer" />
         <Panel>
-          <div className="p-4 h-full">
-            <LiveCoCounselChat speak={(text) => avatarRef.current?.speak(text)} />
+          <div className="live-chat-pane">
+            <LiveCoCounselChat speak={(text) => void avatarRef.current?.speak(text)} />
           </div>
         </Panel>
       </PanelGroup>

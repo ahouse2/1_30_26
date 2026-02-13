@@ -30,6 +30,7 @@ class CryptoTracingResult(BaseModel):
     transactions_traced: List[dict] = Field(default_factory=list)
     clusters: List[dict] = Field(default_factory=list)
     bridge_matches: List[dict] = Field(default_factory=list)
+    custody_attribution: List[dict] = Field(default_factory=list)
     visual_graph_mermaid: Optional[str] = None
     details: str = Field(..., description="Summary of the crypto tracing analysis.")
 

@@ -476,6 +476,44 @@ class GraphStrategyBrief:
         }
 
 
+@dataclass(slots=True)
+class GraphFact:
+    id: str
+    claim: str
+    relation: str
+    source_id: str
+    target_id: str
+    citations: List[str]
+    confidence: float
+
+    def to_dict(self) -> Dict[str, object]:
+        return {
+            "id": self.id,
+            "claim": self.claim,
+            "relation": self.relation,
+            "source_id": self.source_id,
+            "target_id": self.target_id,
+            "citations": list(self.citations),
+            "confidence": self.confidence,
+        }
+
+
+@dataclass(slots=True)
+class GraphFactExtraction:
+    generated_at: str
+    case_id: str | None
+    total: int
+    facts: List[GraphFact]
+
+    def to_dict(self) -> Dict[str, object]:
+        return {
+            "generated_at": self.generated_at,
+            "case_id": self.case_id,
+            "total": self.total,
+            "facts": [fact.to_dict() for fact in self.facts],
+        }
+
+
 class GraphService:
 
     @staticmethod
@@ -911,6 +949,22 @@ class GraphService:
             return case_id in {str(item) for item in cases}
         return False
 
+    def _edge_matches_case(self, edge: GraphEdge, case_id: str) -> bool:
+        properties = edge.properties if isinstance(edge.properties, dict) else {}
+        direct = properties.get("case_id")
+        if isinstance(direct, str) and direct == case_id:
+            return True
+        cases = properties.get("case_ids")
+        if isinstance(cases, (list, tuple, set)) and case_id in {str(item) for item in cases}:
+            return True
+        source = self._node_cache.get(edge.source)
+        if source is not None and self._node_matches_case(source, case_id):
+            return True
+        target = self._node_cache.get(edge.target)
+        if target is not None and self._node_matches_case(target, case_id):
+            return True
+        return False
+
     def document_entities(self, doc_ids: Iterable[str]) -> Dict[str, List[GraphNode]]:
         ids = list(dict.fromkeys(doc_ids))
         if not ids:
@@ -1243,6 +1297,54 @@ class GraphService:
         )
         self._strategy_cache = brief
         return brief
+
+    def extract_facts(
+        self, *, case_id: Optional[str] = None, limit: int = 200
+    ) -> GraphFactExtraction:
+        now = datetime.now(timezone.utc).isoformat()
+        if limit <= 0 or not self._edge_cache:
+            return GraphFactExtraction(generated_at=now, case_id=case_id, total=0, facts=[])
+
+        facts: List[GraphFact] = []
+        for edge in self._edge_cache.values():
+            if edge.type == "ONTOLOGY_CHILD":
+                continue
+            if case_id and not self._edge_matches_case(edge, case_id):
+                continue
+            source_node = self._node_cache.get(edge.source) or GraphNode(edge.source, "Unknown", {})
+            target_node = self._node_cache.get(edge.target) or GraphNode(edge.target, "Unknown", {})
+            relation_label = str(edge.properties.get("predicate") or edge.type)
+            claim = (
+                f"{self._node_display_name(source_node)} "
+                f"{relation_label.replace('_', ' ').lower()} "
+                f"{self._node_display_name(target_node)}"
+            ).strip()
+            citations = self._extract_documents_from_edge(edge)
+            confidence = self._coerce_float(edge.properties.get("confidence"))
+            if confidence is None:
+                weight = self._coerce_float(edge.properties.get("weight"))
+                confidence = abs(weight) if weight is not None else 0.65
+            confidence = max(0.0, min(1.0, float(confidence)))
+            facts.append(
+                GraphFact(
+                    id=f"fact::{edge.source}::{edge.type}::{edge.target}",
+                    claim=claim,
+                    relation=relation_label,
+                    source_id=edge.source,
+                    target_id=edge.target,
+                    citations=citations,
+                    confidence=confidence,
+                )
+            )
+
+        facts.sort(key=lambda item: (item.confidence, len(item.citations), item.id), reverse=True)
+        selected = facts[:limit]
+        return GraphFactExtraction(
+            generated_at=now,
+            case_id=case_id,
+            total=len(selected),
+            facts=selected,
+        )
 
     def build_text_to_cypher_prompt(self, question: str, schema: str | None = None) -> str:
         schema_text = schema or self.describe_schema()

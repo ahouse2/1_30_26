@@ -1,21 +1,7 @@
-# macOS extended attributes
-._*
+node_modules/
+dist/
 .DS_Store
-
-# Dependencies
-node_modules
-
-# Build
-dist
-
-# IDE
-.vscode
-.idea
-
-# Git
-.git
-.gitignore
-
-# Test
-coverage
-.vitest
+._*
+**/.DS_Store
+**/._*
+*.log

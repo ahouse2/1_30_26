@@ -37,14 +37,16 @@ export function LiveCoCounselChat({ speak }: LiveCoCounselChatProps) {
     setError(null);
 
     try {
-      // For demonstration, using a hardcoded agent_id. In a real app, this would be dynamic.
-      const agentId = 'co-counsel-agent'; 
-      const response = await fetch(buildApiUrl(`/agents/${agentId}/run`), {
+      const response = await fetch(buildApiUrl('/agents/run'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: inputMessage }), // Assuming AgentRunRequest takes a 'query' field
+        body: JSON.stringify({
+          case_id: 'default',
+          question: inputMessage,
+          autonomy_level: 'balanced',
+        }),
       });
 
       if (!response.ok) {
@@ -52,7 +54,11 @@ export function LiveCoCounselChat({ speak }: LiveCoCounselChatProps) {
       }
 
       const result = await response.json();
-      const aiResponse: ChatMessage = { id: Date.now().toString(), sender: 'ai', text: result.response }; // Assuming response has a 'response' field
+      const aiResponse: ChatMessage = {
+        id: Date.now().toString(),
+        sender: 'ai',
+        text: result.final_answer ?? 'No response returned.',
+      };
       setMessages((prevMessages) => [...prevMessages, aiResponse]);
     } catch (err: any) {
       setError(err.message);
@@ -107,7 +113,7 @@ export function LiveCoCounselChat({ speak }: LiveCoCounselChatProps) {
             {isSending ? 'Sending...' : 'Send'}
           </button>
         </div>
-        {error && <p className="text-red-500 text-sm mt-2">Error: {error}</p>}
+        {error && <p className="error-text">Error: {error}</p>}
       </div>
     </motion.div>
   );

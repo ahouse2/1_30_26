@@ -12,6 +12,7 @@ from hashlib import md5, sha256
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
 from time import perf_counter
+from io import BytesIO
 
 from opentelemetry import metrics, trace
 from opentelemetry.trace import Status, StatusCode
@@ -28,6 +29,7 @@ from sklearn.ensemble import IsolationForest
 
 from ..config import get_settings
 from ..storage.forensics_chain import ForensicsChainLedger
+from ..storage.timeline_exports import TimelineExportRecord, TimelineExportStore
 from ..utils.text import read_text
 
 
@@ -157,6 +159,8 @@ class ForensicsService:
         self.base_dir = self.settings.forensics_dir
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self.chain_ledger = ForensicsChainLedger(self.settings.forensics_chain_path)
+        export_base = self.settings.workflow_storage_path / "forensics_exports"
+        self.export_store = TimelineExportStore(export_base)
 
     # region public API
     def build_document_artifact(
@@ -338,6 +342,115 @@ class ForensicsService:
 
     def get_financial_forensics(self, transaction_id: str, principal: Principal | None = None) -> Dict[str, Any]:
         return self.load_artifact(transaction_id, "financial", principal=principal)
+
+    def list_report_versions(self, file_id: str, *, limit: int = 20) -> List[Dict[str, Any]]:
+        directory = self.base_dir / file_id
+        versions: List[Dict[str, Any]] = []
+        current = directory / "report.json"
+        if current.exists():
+            payload = json.loads(current.read_text())
+            generated_raw = payload.get("generated_at") or datetime.fromtimestamp(
+                current.stat().st_mtime, tz=timezone.utc
+            ).isoformat()
+            versions.append(
+                {
+                    "version_id": "current",
+                    "created_at": generated_raw,
+                    "source": "current",
+                    "artifacts": sorted(list((payload.get("artifacts") or {}).keys())),
+                    "path": str(current),
+                }
+            )
+        snapshots = directory / "versions"
+        if snapshots.exists():
+            for path in sorted(snapshots.glob("report_*.json"), reverse=True):
+                try:
+                    payload = json.loads(path.read_text())
+                except json.JSONDecodeError:
+                    continue
+                versions.append(
+                    {
+                        "version_id": path.stem.replace("report_", ""),
+                        "created_at": payload.get("generated_at")
+                        or datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat(),
+                        "source": "snapshot",
+                        "artifacts": sorted(list((payload.get("artifacts") or {}).keys())),
+                        "path": str(path),
+                    }
+                )
+                if len(versions) >= limit:
+                    break
+        return versions[:limit]
+
+    def list_audit_events(self, file_id: str, *, limit: int = 100) -> List[Dict[str, Any]]:
+        path = self.settings.audit_log_path
+        if not path.exists():
+            return []
+        events: List[Dict[str, Any]] = []
+        with path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                resource_id = str(record.get("resource_id") or "")
+                subject = record.get("subject")
+                subject_id = ""
+                if isinstance(subject, dict):
+                    subject_id = str(subject.get("id") or "")
+                if resource_id != file_id and subject_id != file_id:
+                    continue
+                events.append(
+                    {
+                        "timestamp": record.get("timestamp"),
+                        "event_type": str(record.get("event_type") or record.get("action") or "UNKNOWN"),
+                        "principal_id": str(
+                            record.get("principal_id")
+                            or (record.get("actor") or {}).get("id")
+                            or "system"
+                        ),
+                        "resource_id": resource_id or subject_id or file_id,
+                        "details": record.get("details") if isinstance(record.get("details"), dict) else {},
+                    }
+                )
+        events.sort(key=lambda item: str(item.get("timestamp") or ""), reverse=True)
+        return events[: max(1, limit)]
+
+    def export_report(
+        self,
+        *,
+        file_id: str,
+        export_format: str,
+        artifact: str | None = None,
+    ) -> TimelineExportRecord:
+        report = self.load_report(file_id)
+        generated_at = datetime.now(timezone.utc).isoformat()
+        filename_base = f"forensics_{file_id}"
+        if export_format == "json":
+            payload_dict: Dict[str, Any]
+            if artifact:
+                payload_dict = {
+                    "file_id": file_id,
+                    "artifact": artifact,
+                    "generated_at": generated_at,
+                    "data": report.get("artifacts", {}).get(artifact, {}),
+                }
+            else:
+                payload_dict = report
+            payload = json.dumps(payload_dict, indent=2, sort_keys=True).encode("utf-8")
+            filename = f"{filename_base}.json"
+        elif export_format == "md":
+            payload = self._render_report_markdown(file_id=file_id, report=report, artifact=artifact).encode("utf-8")
+            filename = f"{filename_base}.md"
+        elif export_format == "html":
+            payload = self._render_report_html(file_id=file_id, report=report, artifact=artifact).encode("utf-8")
+            filename = f"{filename_base}.html"
+        else:
+            raise ValueError("Unsupported export format")
+        return self.export_store.save_export(file_id, export_format, payload, filename)
 
     # endregion
 
@@ -1085,8 +1198,13 @@ class ForensicsService:
         directory = self.base_dir / report.file_id
         directory.mkdir(parents=True, exist_ok=True)
         report_path = directory / "report.json"
+        versions_dir = directory / "versions"
+        versions_dir.mkdir(parents=True, exist_ok=True)
         if report_path.exists():
             payload = json.loads(report_path.read_text())
+            snapshot_stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            snapshot_path = versions_dir / f"report_{snapshot_stamp}.json"
+            snapshot_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
         else:
             payload = {
                 "file_id": report.file_id,
@@ -1110,6 +1228,63 @@ class ForensicsService:
             },
         )
         return report_path
+
+    def _render_report_markdown(self, *, file_id: str, report: Dict[str, Any], artifact: str | None) -> str:
+        lines = [
+            f"# Forensics Report: {file_id}",
+            "",
+            f"Generated at: {report.get('generated_at') or self._now_iso()}",
+            f"Schema version: {report.get('schema_version') or 'unknown'}",
+            "",
+        ]
+        artifacts = report.get("artifacts", {})
+        if artifact:
+            artifacts = {artifact: artifacts.get(artifact, {})}
+        for name, payload in artifacts.items():
+            lines.append(f"## {name}")
+            if isinstance(payload, dict):
+                lines.append(f"- Summary: {payload.get('summary', '')}")
+                lines.append(f"- Fallback applied: {payload.get('fallback_applied', False)}")
+                signals = payload.get("signals") if isinstance(payload.get("signals"), list) else []
+                lines.append(f"- Signals: {len(signals)}")
+                if signals:
+                    for signal in signals[:20]:
+                        if isinstance(signal, dict):
+                            lines.append(
+                                f"  - {signal.get('type', 'signal')} ({signal.get('level', 'info')}): {signal.get('detail', '')}"
+                            )
+                data = payload.get("data", {})
+                lines.append("")
+                lines.append("```json")
+                lines.append(json.dumps(data, indent=2, sort_keys=True))
+                lines.append("```")
+            lines.append("")
+        return "\n".join(lines)
+
+    def _render_report_html(self, *, file_id: str, report: Dict[str, Any], artifact: str | None) -> str:
+        artifacts = report.get("artifacts", {})
+        if artifact:
+            artifacts = {artifact: artifacts.get(artifact, {})}
+        rows = []
+        for name, payload in artifacts.items():
+            summary = ""
+            data_json = "{}"
+            if isinstance(payload, dict):
+                summary = str(payload.get("summary") or "")
+                data_json = json.dumps(payload.get("data", {}), indent=2, sort_keys=True)
+            rows.append(
+                f"<section><h2>{name}</h2><p>{summary}</p><pre>{data_json}</pre></section>"
+            )
+        return (
+            "<!doctype html><html><head><meta charset='utf-8'/>"
+            f"<title>Forensics Report {file_id}</title>"
+            "<style>body{font-family:Arial,sans-serif;padding:20px;}pre{background:#f6f8fa;padding:12px;overflow:auto;}section{margin-bottom:20px;}</style>"
+            "</head><body>"
+            f"<h1>Forensics Report: {file_id}</h1>"
+            f"<p>Generated at {report.get('generated_at') or self._now_iso()}</p>"
+            + "".join(rows)
+            + "</body></html>"
+        )
 
     @staticmethod
     def _now_iso() -> str:

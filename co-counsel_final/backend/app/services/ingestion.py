@@ -22,6 +22,7 @@ from opentelemetry.trace import Status, StatusCode
 
 from ..config import get_settings
 from ..models.api import (
+    AutomationPreferences,
     IngestionRequest,
     IngestionResponse,
     IngestionSource,
@@ -190,7 +191,13 @@ class IngestionService:
 
         job_id = job_id or str(uuid4())
         submitted_at = datetime.now(timezone.utc)
-        job_record = self._initialise_job_record(job_id, submitted_at, request.sources, actor)
+        job_record = self._initialise_job_record(
+            job_id,
+            submitted_at,
+            request.sources,
+            actor,
+            automation=request.automation,
+        )
         self.job_store.write_job(job_id, job_record)
 
         sources_attribute = ",".join(sorted({source.type for source in request.sources}))
@@ -457,6 +464,7 @@ class IngestionService:
                 submitted_at,
                 request.sources,
                 actor=self._system_actor(),
+                automation=request.automation,
             )
         else:
             self._ensure_job_defaults(job_record, request.sources)
@@ -679,6 +687,8 @@ class IngestionService:
             },
             actor=self._job_actor(job_record),
         )
+
+        self._maybe_trigger_automation(job_id, request, job_record)
 
     def _ensure_job_defaults(
         self, job_record: Dict[str, object], sources: List[IngestionSource]
@@ -1225,6 +1235,8 @@ class IngestionService:
         submitted_at: datetime,
         sources: List[IngestionSource],
         actor: Dict[str, Any] | None = None,
+        *,
+        automation: AutomationPreferences | None = None,
     ) -> Dict[str, object]:
         iso = submitted_at.isoformat()
         stages = [
@@ -1237,7 +1249,7 @@ class IngestionService:
             }
             for stage in _STAGE_ORDER
         ]
-        return {
+        record = {
             "job_id": job_id,
             "status": "queued",
             "submitted_at": iso,
@@ -1254,6 +1266,52 @@ class IngestionService:
             },
             "requested_by": actor or self._system_actor(),
         }
+        if automation:
+            record["automation"] = automation.model_dump(exclude_none=True)
+            record["status_details"]["automation"] = {
+                "stages": {},
+                "results": {"legal_frameworks": []},
+            }
+        return record
+
+    def _maybe_trigger_automation(
+        self,
+        job_id: str,
+        request: IngestionRequest,
+        job_record: Dict[str, object],
+    ) -> None:
+        automation = request.automation
+        if automation is None:
+            stored = job_record.get("automation")
+            if isinstance(stored, dict):
+                try:
+                    automation = AutomationPreferences.model_validate(stored)
+                except Exception:
+                    automation = None
+        if automation is None or not automation.auto_run:
+            return
+
+        stages = automation.stages or []
+        question = automation.question
+        case_id = automation.case_id
+        autonomy_level = automation.autonomy_level
+
+        def _run_pipeline() -> None:
+            try:
+                from .automation_pipeline import AutomationPipelineService, AUTOMATION_STAGES
+
+                pipeline = AutomationPipelineService(job_store=self.job_store)
+                pipeline.run_stages(
+                    job_id,
+                    stages or list(AUTOMATION_STAGES),
+                    question=question,
+                    case_id=case_id,
+                    autonomy_level=autonomy_level,
+                )
+            except Exception:
+                self.logger.exception("Automation pipeline failed", extra={"job_id": job_id})
+
+        self.executor.submit(_run_pipeline)
 
     def _transition_job(self, job_record: Dict[str, object], status_value: str) -> None:
         previous = job_record.get("status")

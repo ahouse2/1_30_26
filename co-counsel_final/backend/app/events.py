@@ -1,3 +1,5 @@
+import os
+
 from .services.agents import get_agents_service
 from .services.ingestion import (
     get_ingestion_worker,
@@ -12,8 +14,10 @@ def register_events(app):
     @app.on_event("startup")
     def start_background_workers() -> None:
         get_ingestion_worker()
-        get_agents_service()
-        get_graph_refinement_worker()
+        if os.getenv("START_GRAPH_REFINEMENT_ON_STARTUP", "false").lower() in {"1", "true", "yes"}:
+            get_graph_refinement_worker()
+        if os.getenv("PREWARM_AGENTS_ON_STARTUP", "false").lower() in {"1", "true", "yes"}:
+            get_agents_service()
 
 
     @app.on_event("shutdown")

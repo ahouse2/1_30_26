@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Case Timeline &amp; Events - Legal Command Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1bc9fe", // Neon Cyan
+                        "electric-gold": "#FFD700",
+                        "gold-glow": "#FFC107",
+                        "background-dark": "#0a0c10", // Superdark canvas
+                        "glass-bg": "rgba(255, 255, 255, 0.02)",
+                        "card-glass": "rgba(20, 25, 35, 0.6)",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["IBM Plex Mono", "monospace"]
+                    },
+                    backgroundImage: {
+                        'grain': "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.04%22/%3E%3C/svg%3E')",
+                    }
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .glass-panel {
+                @apply bg-card-glass border border-white/5;
+                backdrop-filter: blur(32px);
+                -webkit-backdrop-filter: blur(32px);
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            }
+            .rim-lit {
+                box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+            }
+            .timeline-line {
+                background: linear-gradient(to bottom, transparent 0%, rgba(27, 201, 254, 0.2) 15%, rgba(27, 201, 254, 0.2) 85%, transparent 100%);
+            }
+            .glow-marker {
+                box-shadow: 0 0 15px rgba(27, 201, 254, 0.5);
+            }
+            .glow-marker-gold {
+                box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+            }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+<style>
+        body {
+            min-height: 100dvh;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display text-white selection:bg-primary/30 antialiased overflow-hidden h-screen w-screen relative">
+<div class="absolute inset-0 pointer-events-none z-50 bg-grain mix-blend-overlay"></div>
+<div class="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+<div class="absolute top-[-10%] left-[20%] w-[800px] h-[800px] rounded-full bg-primary/5 blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-electric-gold/5 blur-[100px]"></div>
+<div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 40px 40px;"></div>
+</div>
+<header class="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-6 z-40 border-b border-white/5 bg-background-dark/80 backdrop-blur-md">
+<div class="flex items-center gap-4">
+<div class="size-10 flex items-center justify-center border border-white/10 rounded-lg bg-white/5">
+<span class="material-symbols-outlined text-white/80 text-xl">grid_view</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[9px] font-mono uppercase tracking-[0.2em] text-primary/80">Case Insight v4.0</span>
+<h1 class="text-sm font-light tracking-tight text-white/90">
+                    Case <span class="font-semibold text-white">Timeline</span>
+</h1>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full glass-panel">
+<div class="size-1.5 rounded-full bg-primary shadow-[0_0_8px_#1bc9fe]"></div>
+<span class="text-[9px] font-mono uppercase tracking-wider text-white/80">Active Analysis</span>
+</div>
+<button class="p-1.5 rounded-full hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-white/60 text-lg">tune</span>
+</button>
+</div>
+</header>
+<div class="flex h-full pt-16">
+<aside class="w-16 h-full flex flex-col items-center py-6 gap-6 border-r border-white/5 bg-background-dark/30 backdrop-blur-sm z-30">
+<div class="flex flex-col items-center gap-1 group cursor-pointer opacity-40 hover:opacity-100 transition-opacity">
+<div class="size-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit">
+<span class="material-symbols-outlined text-white/60 text-lg">hub</span>
+</div>
+<span class="text-[7px] font-mono uppercase tracking-tighter text-white/40">Graph</span>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer opacity-40 hover:opacity-100 transition-opacity">
+<div class="size-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit">
+<span class="material-symbols-outlined text-white/60 text-lg">chat_bubble</span>
+</div>
+<span class="text-[7px] font-mono uppercase tracking-tighter text-white/40">Intel</span>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer">
+<div class="size-10 rounded-xl flex items-center justify-center border border-primary/40 bg-primary/10 rim-lit shadow-[0_0_15px_rgba(27,201,254,0.1)]">
+<span class="material-symbols-outlined text-primary text-lg">schedule</span>
+</div>
+<span class="text-[7px] font-mono uppercase tracking-tighter text-primary">History</span>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer opacity-40 hover:opacity-100 transition-opacity">
+<div class="size-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit">
+<span class="material-symbols-outlined text-white/60 text-lg">description</span>
+</div>
+<span class="text-[7px] font-mono uppercase tracking-tighter text-white/40">Docs</span>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer mt-auto opacity-60">
+<div class="size-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit">
+<span class="material-symbols-outlined text-electric-gold/80 text-lg">school</span>
+</div>
+</div>
+</aside>
+<main class="flex-1 relative overflow-y-auto px-6 py-12 scroll-smooth">
+<div class="max-w-md mx-auto relative">
+<div class="absolute left-4 top-0 bottom-0 w-px timeline-line z-0"></div>
+<div class="space-y-10 relative z-10">
+<div class="relative pl-12">
+<div class="absolute left-[13px] top-4 size-[10px] rounded-full bg-electric-gold glow-marker-gold border-2 border-background-dark"></div>
+<div class="glass-panel rounded-2xl p-5 rim-lit">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-mono text-electric-gold tracking-[0.2em] uppercase">Deadline: Discovery Phase</span>
+<span class="text-[9px] font-mono text-white/40">12 OCT 2024</span>
+</div>
+<h3 class="text-sm font-medium text-white mb-3">Final Document Submission (Exhibit E)</h3>
+<div class="p-3 bg-white/5 rounded-lg border border-white/5 mb-4">
+<p class="text-[11px] leading-relaxed text-white/70 italic">
+                                    "Critical requirement to submit all digital forensics related to server logs before midnight PST."
+                                </p>
+</div>
+<div class="flex gap-2">
+<div class="flex items-center gap-1.5 px-2 py-1 rounded bg-primary/10 border border-primary/20">
+<span class="material-symbols-outlined text-[10px] text-primary">link</span>
+<span class="text-[9px] font-mono text-primary uppercase">Forensics_Log_001.pdf</span>
+</div>
+</div>
+</div>
+</div>
+<div class="relative pl-12">
+<div class="absolute left-[13px] top-4 size-[10px] rounded-full bg-primary glow-marker border-2 border-background-dark"></div>
+<div class="glass-panel rounded-2xl p-5 rim-lit border-primary/20">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-mono text-primary/80 tracking-[0.2em] uppercase">Deposition Summary</span>
+<span class="text-[9px] font-mono text-white/40">08 OCT 2024</span>
+</div>
+<h3 class="text-sm font-medium text-white mb-2">Deposition: Sarah Manning</h3>
+<p class="text-[11px] leading-relaxed text-white/60 mb-4">
+                                Witness confirmed the internal communication protocol used between 2022 and 2023. Key testimony regarding 'Ghost Channels'.
+                            </p>
+<div class="space-y-2 mb-4">
+<div class="flex items-center justify-between text-[9px] text-white/40 uppercase tracking-widest px-1">
+<span>Conflict Analysis</span>
+<span class="text-primary">Low Risk</span>
+</div>
+<div class="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[25%] shadow-[0_0_8px_rgba(27,201,254,0.4)]"></div>
+</div>
+</div>
+<button class="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] font-mono uppercase text-white/70 tracking-widest transition-all">
+                                View Full Transcript
+                            </button>
+</div>
+</div>
+<div class="relative pl-12 opacity-60">
+<div class="absolute left-[14px] top-4 size-[8px] rounded-full bg-white/20 border border-white/10"></div>
+<div class="glass-panel rounded-2xl p-4 rim-lit">
+<div class="flex justify-between items-start mb-1">
+<span class="text-[9px] font-mono text-white/50 tracking-[0.1em] uppercase">Status Update</span>
+<span class="text-[9px] font-mono text-white/40">01 OCT 2024</span>
+</div>
+<h3 class="text-xs font-medium text-white/80">Motion for Extension Filed</h3>
+</div>
+</div>
+<div class="relative pl-12">
+<div class="absolute left-[13px] top-4 size-[10px] rounded-full bg-primary glow-marker border-2 border-background-dark"></div>
+<div class="glass-panel rounded-2xl p-5 rim-lit">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-mono text-primary/80 tracking-[0.2em] uppercase">Court Filing</span>
+<span class="text-[9px] font-mono text-white/40">28 SEP 2024</span>
+</div>
+<h3 class="text-sm font-medium text-white mb-3">Amended Complaint Submission</h3>
+<p class="text-[11px] leading-relaxed text-white/60 mb-4 line-clamp-2">
+                                Revision of Clause 4.2 following the discovery of undisclosed offshore accounts linked to the primary defendant.
+                            </p>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-colors">
+<span class="material-symbols-outlined text-xs text-primary">description</span>
+<span class="text-[10px] text-primary/90">Amended_Complaint_v2.doc</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed bottom-6 right-6 flex flex-col items-end gap-4 z-50">
+<div class="glass-panel rounded-xl p-3 border-primary/20 max-w-[200px] shadow-2xl">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-xs animate-pulse">auto_awesome</span>
+<span class="text-[9px] font-mono text-white/80 tracking-widest uppercase">AI Context</span>
+</div>
+<p class="text-[9px] text-white/50 leading-tight">
+                    Timeline suggests 14% drift from original strategy. Recommend re-alignment.
+                </p>
+</div>
+<button class="size-12 rounded-full bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(27,201,254,0.4)] text-background-dark hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-2xl font-bold">add</span>
+</button>
+</div>
+</div>
+<div class="fixed inset-0 pointer-events-none opacity-[0.02]">
+<svg height="100%" width="100%" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<pattern height="40" id="grid" patternUnits="userSpaceOnUse" width="40">
+<path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="0.5"></path>
+</pattern>
+</defs>
+<rect fill="url(#grid)" height="100%" width="100%"></rect>
+</svg>
+</div>
+
+</body></html>

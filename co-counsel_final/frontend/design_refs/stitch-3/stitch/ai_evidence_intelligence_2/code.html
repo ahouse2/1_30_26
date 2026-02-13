@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Intel Briefing - Legal Command Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1bc9fe", // Neon Cyan
+                        "electric-gold": "#FFD700",
+                        "gold-glow": "#FFC107",
+                        "background-dark": "#0a0c10", // Superdark canvas
+                        "glass-bg": "rgba(255, 255, 255, 0.02)",
+                        "card-glass": "rgba(20, 25, 35, 0.6)",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["IBM Plex Mono", "monospace"]
+                    },
+                    backgroundImage: {
+                        'grain': "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.04%22/%3E%3C/svg%3E')",
+                    }
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .glass-panel {
+                @apply bg-card-glass border border-white/5;
+                backdrop-filter: blur(32px);
+                -webkit-backdrop-filter: blur(32px);
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            }
+            .rim-lit {
+                box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+            }
+            .bubble-cascade {
+                mask-image: linear-gradient(to top, black 85%, transparent 100%);
+            }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(27, 201, 254, 0.2);
+            border-radius: 10px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display text-white selection:bg-primary/30 antialiased overflow-hidden h-screen w-screen relative">
+<div class="absolute inset-0 pointer-events-none z-50 bg-grain mix-blend-overlay"></div>
+<div class="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+<div class="absolute top-[-10%] left-[20%] w-[800px] h-[800px] rounded-full bg-primary/5 blur-[120px] animate-pulse"></div>
+<div class="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-electric-gold/5 blur-[100px]"></div>
+</div>
+<header class="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-6 z-40 border-b border-white/5 bg-background-dark/80 backdrop-blur-md">
+<div class="flex items-center gap-4">
+<div class="p-1.5 border border-white/10 rounded-lg bg-white/5">
+<span class="material-symbols-outlined text-white/80 text-xl">grid_view</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[8px] font-mono uppercase tracking-[0.2em] text-primary/80">Intel Briefing v4.2</span>
+<h1 class="text-sm font-light tracking-tight text-white/90">
+                    Legal <span class="font-semibold text-white">Command Hub</span>
+</h1>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full glass-panel border-primary/20">
+<div class="size-1.5 rounded-full bg-primary shadow-[0_0_8px_#1bc9fe]"></div>
+<span class="text-[9px] font-mono uppercase tracking-wider text-primary/90">AI Sync</span>
+</div>
+<span class="material-symbols-outlined text-white/60">account_circle</span>
+</div>
+</header>
+<div class="flex h-full pt-16">
+<aside class="w-16 h-full flex flex-col items-center py-6 gap-6 border-r border-white/5 bg-background-dark/30 backdrop-blur-sm z-30">
+<div class="flex flex-col items-center gap-1 group cursor-pointer opacity-40">
+<div class="size-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit">
+<span class="material-symbols-outlined text-lg">hub</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer">
+<div class="size-10 rounded-xl flex items-center justify-center border border-primary/50 bg-primary/10 rim-lit shadow-[0_0_15px_rgba(27,201,254,0.15)]">
+<span class="material-symbols-outlined text-lg text-primary">chat_bubble</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer opacity-40">
+<div class="size-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit">
+<span class="material-symbols-outlined text-lg">schedule</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer opacity-40">
+<div class="size-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit">
+<span class="material-symbols-outlined text-lg">description</span>
+</div>
+</div>
+<div class="mt-auto mb-4 flex flex-col items-center gap-1 group cursor-pointer">
+<div class="size-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit">
+<span class="material-symbols-outlined text-lg text-electric-gold/80">settings</span>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col relative h-full">
+<div class="flex-1 overflow-y-auto px-6 py-8 space-y-6 bubble-cascade pb-32">
+<div class="max-w-[85%] space-y-2">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-xs">auto_awesome</span>
+<span class="text-[9px] font-mono uppercase tracking-widest text-primary/70">Intelligence Module</span>
+</div>
+<div class="glass-panel p-4 rounded-2xl rounded-tl-none border-l-2 border-l-primary/40">
+<p class="text-[13px] leading-relaxed text-white/90">
+                            I have processed 1,240 pages of discovery for the <span class="text-primary">Starlight v. Apex</span> case. Key discrepancies detected in the Q3 environmental filings. How would you like to proceed?
+                        </p>
+</div>
+</div>
+<div class="max-w-[80%] ml-auto">
+<div class="glass-panel bg-white/5 p-3 rounded-2xl rounded-tr-none text-right">
+<p class="text-[12px] text-white/80">Summarize the liability exposure based on the recent deposition of Dr. Aris.</p>
+</div>
+</div>
+<div class="max-w-[90%] space-y-4">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-electric-gold text-xs">analytics</span>
+<span class="text-[9px] font-mono uppercase tracking-widest text-electric-gold/70">Liability Assessment</span>
+</div>
+<div class="glass-panel p-5 rounded-2xl rounded-tl-none border-t border-white/10">
+<h3 class="text-xs font-semibold mb-3 flex items-center gap-2">
+<span class="size-1.5 rounded-full bg-electric-gold"></span>
+                            Actionable Insight: Deposition Summary
+                        </h3>
+<div class="space-y-3">
+<div class="flex gap-3">
+<div class="w-1 bg-primary/30 rounded-full"></div>
+<p class="text-[11px] text-white/70 leading-relaxed italic">
+                                    "We knew the sensor data was intermittent, but reporting thresholds were maintained..."
+                                </p>
+</div>
+<p class="text-[12px] text-white/90">
+                                This admission increases negligence risk by <span class="text-electric-gold">22%</span>. The testimony contradicts internal memo <span class="text-primary underline underline-offset-4 decoration-primary/30">#EX-042</span>.
+                            </p>
+<div class="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-white/5">
+<button class="flex items-center justify-center gap-2 py-2 rounded-lg bg-primary/10 border border-primary/20 text-[10px] font-mono uppercase tracking-wider text-primary">
+<span class="material-symbols-outlined text-xs">gavel</span> Compare Test.
+                                </button>
+<button class="flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 border border-white/10 text-[10px] font-mono uppercase tracking-wider text-white/70">
+<span class="material-symbols-outlined text-xs">share_reviews</span> Full Analysis
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<div class="max-w-[85%] space-y-2">
+<div class="glass-panel p-4 rounded-2xl rounded-tl-none border-l-2 border-l-primary/40">
+<p class="text-[12px] text-white/90 mb-3">Recommended immediate actions:</p>
+<div class="space-y-2">
+<div class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/5 group hover:border-primary/30 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-primary text-sm">priority_high</span>
+<span class="text-[11px] text-white/80">Issue subpoena for sensor maintenance logs (2022-2023)</span>
+</div>
+<div class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/5 group hover:border-primary/30 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-primary text-sm">assignment_late</span>
+<span class="text-[11px] text-white/80">Schedule follow-up for witness impeachment prep</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent">
+<div class="max-w-xl mx-auto relative group">
+<div class="absolute inset-0 rounded-2xl bg-primary/10 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+<div class="relative glass-panel rounded-2xl p-1.5 flex items-center gap-2 border-white/10 group-focus-within:border-primary/40">
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-[13px] px-4 py-2 placeholder:text-white/20 text-white" placeholder="Inquire about legal precedents or case specifics..." type="text"/>
+<button class="size-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/30 hover:bg-primary/20 transition-all text-primary">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+<div class="flex justify-between items-center px-4 mt-3">
+<div class="flex gap-4">
+<button class="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-widest text-white/40 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xs">attachment</span> Add Context
+                            </button>
+<button class="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-widest text-white/40 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xs">history</span> Recent
+                            </button>
+</div>
+<span class="text-[9px] font-mono text-white/20">GPT-V4 Legal Engine Active</span>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

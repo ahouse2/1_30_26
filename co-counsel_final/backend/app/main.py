@@ -1,26 +1,22 @@
-﻿from __future__ import annotations
-import os
-
+from __future__ import annotations
 from fastapi import (
     FastAPI,
 )
 
 from .config import get_settings
 from .telemetry import setup_telemetry
+from .security.dependencies import create_mtls_config
+from .security.mtls import MTLSMiddleware
 
 settings = get_settings()
 setup_telemetry(settings)
 app = FastAPI(title=settings.app_name, version=settings.app_version)
-# [dev] mTLS enabled
-import ssl
-from fastapi import Request, HTTPException
-
-@app.middleware("http")
-async def mtls_middleware(request: Request, call_next):
-    if request.url.scheme == "https" and "ssl_client_cert" not in request.scope:
-        raise HTTPException(status_code=403, detail="Client certificate required")
-    response = await call_next(request)
-    return response
+try:
+    mtls_config = create_mtls_config()
+except RuntimeError:
+    mtls_config = None
+if mtls_config:
+    app.add_middleware(MTLSMiddleware, config=mtls_config)
 
 from .api import retrieval
 
@@ -90,6 +86,10 @@ from .api import timeline
 
 app.include_router(timeline.router)
 
+from .api import presentation
+
+app.include_router(presentation.router)
+
 from .api import voice
 
 app.include_router(voice.router)
@@ -101,6 +101,10 @@ app.include_router(ingestion.router)
 from .api import workflow
 
 app.include_router(workflow.router)
+
+from .api import parity_ops
+
+app.include_router(parity_ops.router)
 
 from .api import automation
 
@@ -150,7 +154,15 @@ from .api import cases
 
 app.include_router(cases.router, prefix="/api", tags=["Cases"])
 
+import logging
+import os
+
 from .database import engine, Base
 from .models import service_of_process, document, recipient, user, role, user_role, permission, role_permission
 
-Base.metadata.create_all(bind=engine)
+_logger = logging.getLogger(__name__)
+if os.environ.get("COCOUNSEL_DB_AUTOINIT", "1").lower() in {"1", "true", "yes"}:
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as exc:  # pragma: no cover - optional for tests
+        _logger.warning("Database auto-init skipped: %s", exc)

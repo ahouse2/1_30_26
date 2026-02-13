@@ -50,27 +50,31 @@ export function GraphExplorer() {
 
   return (
     <motion.div
-      className="bg-[#1a1a1f] rounded-xl p-6 border border-[#2a2a2f] backdrop-blur-md shadow-[0_0_20px_#3b82f688]"
+      className="graph-explorer-card"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+      transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' }}
     >
-      <h2 className="text-lg font-medium mb-2">Graph Explorer</h2>
-      <div className="h-48 bg-black rounded-lg flex items-center justify-center text-gray-500">
+      <h2>Graph Explorer</h2>
+      <div className="graph-explorer-canvas">
         {loading && <span>Loading Graph...</span>}
-        {error && <span className="text-red-500">Error: {error}</span>}
+        {error && <span className="error-text">Error: {error}</span>}
         {graphData && graphData.nodes.length > 0 && (
           <div>
-            <h3>Nodes:</h3>
+            <h3>Nodes</h3>
             <ul>
               {graphData.nodes.map((node) => (
-                <li key={node.id}>{node.label} ({node.id})</li>
+                <li key={node.id}>
+                  {node.label} ({node.id})
+                </li>
               ))}
             </ul>
-            <h3>Edges:</h3>
+            <h3>Edges</h3>
             <ul>
               {graphData.edges.map((edge, index) => (
-                <li key={index}>{edge.source} {'->'} {edge.target}</li>
+                <li key={index}>
+                  {edge.source} {'->'} {edge.target}
+                </li>
               ))}
             </ul>
           </div>

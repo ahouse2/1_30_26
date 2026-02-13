@@ -18,6 +18,7 @@ from backend.app.models.api import IngestionSource
 from backend.app.utils.text import read_text
 
 from .ocr import OcrEngine, OcrResult
+from .vision import VisionAnalyzer
 from .settings import LlamaIndexRuntimeConfig
 from .utils import compute_sha256
 
@@ -111,6 +112,10 @@ class LoaderRegistry:
         self.logger = logger
         self.hub_factory = hub_factory or HubLoaderFactory()
         self._resolve_credentials = credential_resolver
+        self.vision_analyzer = VisionAnalyzer(
+            runtime_config.vision,
+            logger=self.logger.getChild("vision"),
+        )
 
     def load_documents(
         self, materialized_root: Path, source: IngestionSource, *, origin: str
@@ -164,6 +169,7 @@ class LoaderRegistry:
     def _load_image(self, path: Path, source: IngestionSource, origin: str) -> LoadedDocument:
         ocr_result = self.ocr_engine.extract_from_image(path)
         metadata = self._base_metadata(path, source, origin)
+        vision_result = self.vision_analyzer.analyze(path.read_bytes(), source=str(path))
         metadata.update(
             {
                 "ocr_engine": ocr_result.engine,
@@ -171,6 +177,16 @@ class LoaderRegistry:
                 "ocr_tokens": ocr_result.tokens,
             }
         )
+        if vision_result:
+            metadata.update(
+                {
+                    "vision_caption": vision_result.caption,
+                    "vision_labels": vision_result.labels,
+                    "vision_categories": vision_result.categories,
+                    "vision_objects": vision_result.objects,
+                    "vision_confidence": vision_result.confidence,
+                }
+            )
         document = Document(text=ocr_result.text, metadata=metadata, metadata_mode=METADATA_MODE_ALL)
         checksum = compute_sha256(path)
         return LoadedDocument(source=source, path=path, document=document, text=ocr_result.text, checksum=checksum, metadata=metadata, ocr=ocr_result)

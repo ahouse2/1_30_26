@@ -104,9 +104,10 @@ class Settings(BaseSettings):
 
     tts_enabled: bool = Field(default=True)
     tts_service_url: str | None = Field(default=None)
+    tts_backend: str = Field(default="auto")
     tts_timeout_seconds: float = Field(default=15.0, ge=1.0)
     tts_cache_dir: Path = Field(default=Path("storage/audio_cache"))
-    tts_default_voice: str = Field(default="larynx:en-us-blizzard_lessac")
+    tts_default_voice: str = Field(default="aurora")
     knowledge_catalog_path: Path = Field(default=Path("docs/knowledge/catalog.json"))
     knowledge_content_dir: Path = Field(default=Path("docs/knowledge/best_practices"))
     knowledge_progress_path: Path = Field(default=Path("storage/knowledge/progress.json"))
@@ -241,7 +242,11 @@ class Settings(BaseSettings):
     ingestion_tesseract_path: Optional[Path] = Field(default=None)
     ingestion_vision_endpoint: Optional[str] = Field(default=None)
     ingestion_vision_model: Optional[str] = Field(default=None)
+    ingestion_vision_label_model: Optional[str] = Field(default=None)
     ingestion_vision_api_key: Optional[str] = Field(default=None)
+    ingestion_vision_prompt: str = Field(
+        default="Identify objects, people, locations, and any visible text. Provide a concise caption and 5-10 tags."
+    )
     ingestion_ollama_model: str = Field(default="llama3.1") # Added
     ingestion_ollama_base: Optional[str] = Field(default="http://localhost:11434") # Added with default
     llamacpp_server_url: Optional[str] = Field(default="http://localhost:8080") # Added for llama.cpp
@@ -264,6 +269,7 @@ class Settings(BaseSettings):
     pacer_endpoint: Optional[str] = Field(default=None)
     unicourt_endpoint: Optional[str] = Field(default=None)
     lacs_endpoint: Optional[str] = Field(default=None)
+    leginfo_endpoint: str = Field(default="https://leginfo.legislature.ca.gov")
     caselaw_endpoint: str = Field(default="https://api.case.law/v1/cases/")
     caselaw_api_key: Optional[str] = Field(default=None)
     caselaw_max_results: int = Field(default=10, ge=0, le=100)
@@ -326,7 +332,48 @@ def get_settings() -> Settings:
                     settings.neo4j_password = pwd
         except Exception:
             pass
+    _apply_settings_overrides(settings)
     return settings
+
+
+def _apply_settings_overrides(settings: Settings) -> None:
+    """Overlay persisted settings onto runtime config."""
+    from backend.app.storage.settings_store import SettingsStore
+
+    store = SettingsStore(settings.settings_store_path, settings.manifest_encryption_key_path)
+    state = store.load()
+
+    policy = state.get("agents_policy", {})
+    if "enabled" in policy:
+        settings.agents_policy_enabled = bool(policy["enabled"])
+    if "initial_trust" in policy:
+        settings.agents_policy_initial_trust = float(policy["initial_trust"])
+    if "trust_threshold" in policy:
+        settings.agents_policy_trust_threshold = float(policy["trust_threshold"])
+    if "decay" in policy:
+        settings.agents_policy_decay = float(policy["decay"])
+    if "success_reward" in policy:
+        settings.agents_policy_success_reward = float(policy["success_reward"])
+    if "failure_penalty" in policy:
+        settings.agents_policy_failure_penalty = float(policy["failure_penalty"])
+    if "exploration_probability" in policy:
+        settings.agents_policy_exploration_probability = float(policy["exploration_probability"])
+    if "seed" in policy:
+        settings.agents_policy_seed = policy["seed"]
+    if "observable_roles" in policy:
+        settings.agents_policy_observable_roles = tuple(policy["observable_roles"] or ())
+    if "suppressible_roles" in policy:
+        settings.agents_policy_suppressible_roles = tuple(policy["suppressible_roles"] or ())
+
+    graph = state.get("graph_refinement", {})
+    if "enabled" in graph:
+        settings.graph_refinement_enabled = bool(graph["enabled"])
+    if "interval_seconds" in graph:
+        settings.graph_refinement_interval_seconds = float(graph["interval_seconds"])
+    if "idle_limit" in graph:
+        settings.graph_refinement_idle_limit = int(graph["idle_limit"])
+    if "min_new_edges" in graph:
+        settings.graph_refinement_min_new_edges = int(graph["min_new_edges"])
 
 
 def get_llm_config(settings: Settings = Depends(get_settings)) -> LlmConfig:

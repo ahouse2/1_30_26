@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Consolidated Legal Command Hub - Analytics Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1bc9fe", // Neon Cyan
+                        "electric-gold": "#FFD700",
+                        "gold-glow": "#FFC107",
+                        "background-dark": "#0a0c10", // Superdark canvas
+                        "glass-bg": "rgba(255, 255, 255, 0.02)",
+                        "card-glass": "rgba(20, 25, 35, 0.6)",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["IBM Plex Mono", "monospace"]
+                    },
+                    backgroundImage: {
+                        'grain': "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.04%22/%3E%3C/svg%3E')",
+                    }
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .glass-panel {
+                @apply bg-card-glass border border-white/5;
+                backdrop-filter: blur(32px);
+                -webkit-backdrop-filter: blur(32px);
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            }
+            .halo-edge {
+                box-shadow: 0 0 50px -10px rgba(27, 201, 254, 0.15), inset 0 0 20px rgba(27, 201, 254, 0.1);
+            }
+            .rim-lit {
+                box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+            }
+            .glow-cyan {
+                box-shadow: 0 0 15px rgba(27, 201, 254, 0.4);
+            }
+            .glow-gold {
+                box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0c10; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #374151; 
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display text-white selection:bg-primary/30 antialiased overflow-hidden h-screen w-screen relative">
+<div class="absolute inset-0 pointer-events-none z-50 bg-grain mix-blend-overlay"></div>
+<div class="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+<div class="absolute top-[-10%] left-[20%] w-[800px] h-[800px] rounded-full bg-primary/5 blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-electric-gold/5 blur-[100px]"></div>
+<div class="absolute inset-0 opacity-[0.05]" style="background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 60px 60px;"></div>
+</div>
+<header class="fixed top-0 left-0 right-0 h-20 flex items-center justify-between px-10 z-40 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm">
+<div class="flex items-center gap-6">
+<div class="p-2 border border-white/10 rounded-lg bg-white/5">
+<span class="material-symbols-outlined text-white/80">insights</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-mono uppercase tracking-[0.2em] text-primary/80">Analytics Engine v1.2</span>
+<h1 class="text-xl font-light tracking-tight text-white/90">
+                Performance <span class="font-semibold text-white">Legal Overview</span>
+</h1>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<nav class="flex items-center gap-8">
+<a class="text-xs font-medium uppercase tracking-widest text-white/40 hover:text-white transition-colors" href="#">Discovery</a>
+<a class="text-xs font-medium uppercase tracking-widest text-white/40 hover:text-white transition-colors" href="#">Trial Prep</a>
+<a class="text-xs font-medium uppercase tracking-widest text-primary border-b border-primary pb-1" href="#">Analytics</a>
+</nav>
+<div class="h-6 w-px bg-white/10"></div>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full glass-panel hover:bg-white/5 transition-all group">
+<div class="size-2 rounded-full bg-electric-gold shadow-[0_0_8px_#FFD700]"></div>
+<span class="text-xs font-mono uppercase tracking-wider text-white/80">Real-time Data</span>
+</button>
+</div>
+</header>
+<div class="flex h-full pt-20">
+<aside class="w-24 h-full flex flex-col items-center py-8 gap-8 border-r border-white/5 bg-background-dark/30 backdrop-blur-sm z-30">
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="size-12 rounded-2xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit group-hover:border-primary/50 transition-all duration-300">
+<span class="material-symbols-outlined text-white/60 group-hover:text-primary transition-colors">hub</span>
+</div>
+<span class="text-[9px] font-serif tracking-wider text-white/40 group-hover:text-white">Graph</span>
+</div>
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="size-12 rounded-2xl flex items-center justify-center border border-primary/50 bg-primary/5 rim-lit shadow-[0_0_15px_rgba(27,201,254,0.2)] transition-all duration-300">
+<span class="material-symbols-outlined text-primary">monitoring</span>
+</div>
+<span class="text-[9px] font-serif tracking-wider text-white">Analytics</span>
+</div>
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="size-12 rounded-2xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit group-hover:border-primary/50 transition-all duration-300">
+<span class="material-symbols-outlined text-white/60 group-hover:text-white transition-colors">history</span>
+</div>
+<span class="text-[9px] font-serif tracking-wider text-white/40 group-hover:text-white">Trends</span>
+</div>
+<div class="flex flex-col items-center gap-2 group cursor-pointer mt-auto">
+<div class="size-12 rounded-2xl flex items-center justify-center border border-white/10 bg-white/5 rim-lit group-hover:border-electric-gold/50 group-hover:shadow-[0_0_15px_rgba(255,215,0,0.2)] transition-all duration-300">
+<span class="material-symbols-outlined text-electric-gold/80">school</span>
+</div>
+<span class="text-[9px] font-serif tracking-wider text-white/40 group-hover:text-electric-gold transition-colors">Trial U</span>
+</div>
+</aside>
+<main class="flex-1 relative flex items-center justify-center p-12">
+<div class="grid grid-cols-2 gap-8 w-full max-w-5xl h-full max-h-[700px]">
+<div class="glass-panel rounded-3xl p-8 flex flex-col relative overflow-hidden">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-sm font-medium text-white/90">Case Outcome Distribution</h3>
+<p class="text-[10px] font-mono text-white/40 uppercase tracking-widest mt-1">Current Fiscal Year</p>
+</div>
+<span class="material-symbols-outlined text-primary">assessment</span>
+</div>
+<div class="flex-1 flex items-end justify-between gap-4 px-4 pb-4">
+<div class="w-full flex flex-col items-center gap-3">
+<div class="w-full bg-white/5 rounded-t-lg relative group h-48">
+<div class="absolute bottom-0 w-full bg-primary/40 border-t border-primary/60 rounded-t-lg transition-all glow-cyan" style="height: 78%"></div>
+</div>
+<span class="text-[9px] font-mono text-white/60">Settled</span>
+</div>
+<div class="w-full flex flex-col items-center gap-3">
+<div class="w-full bg-white/5 rounded-t-lg relative group h-48">
+<div class="absolute bottom-0 w-full bg-electric-gold/40 border-t border-electric-gold/60 rounded-t-lg transition-all glow-gold" style="height: 42%"></div>
+</div>
+<span class="text-[9px] font-mono text-white/60">Won</span>
+</div>
+<div class="w-full flex flex-col items-center gap-3">
+<div class="w-full bg-white/5 rounded-t-lg relative group h-48">
+<div class="absolute bottom-0 w-full bg-white/10 border-t border-white/30 rounded-t-lg transition-all" style="height: 15%"></div>
+</div>
+<span class="text-[9px] font-mono text-white/60">Lost</span>
+</div>
+<div class="w-full flex flex-col items-center gap-3">
+<div class="w-full bg-white/5 rounded-t-lg relative group h-48">
+<div class="absolute bottom-0 w-full bg-primary/40 border-t border-primary/60 rounded-t-lg transition-all glow-cyan" style="height: 56%"></div>
+</div>
+<span class="text-[9px] font-mono text-white/60">Appeal</span>
+</div>
+</div>
+</div>
+<div class="glass-panel rounded-3xl p-8 flex flex-col relative overflow-hidden">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-sm font-medium text-white/90">Evidence Type Density</h3>
+<p class="text-[10px] font-mono text-white/40 uppercase tracking-widest mt-1">Total Assets: 14.2k</p>
+</div>
+<span class="material-symbols-outlined text-electric-gold">pie_chart</span>
+</div>
+<div class="flex-1 flex items-center justify-center relative">
+<div class="size-48 rounded-full border-[16px] border-white/5 flex items-center justify-center relative">
+<svg class="absolute inset-0 size-full -rotate-90">
+<circle class="drop-shadow-[0_0_8px_rgba(27,201,254,0.4)]" cx="96" cy="96" fill="transparent" r="80" stroke="#1bc9fe" stroke-dasharray="502" stroke-dashoffset="150" stroke-opacity="0.6" stroke-width="16"></circle>
+<circle class="drop-shadow-[0_0_8px_rgba(255,215,0,0.4)]" cx="96" cy="96" fill="transparent" r="80" stroke="#FFD700" stroke-dasharray="502" stroke-dashoffset="400" stroke-opacity="0.6" stroke-width="16"></circle>
+</svg>
+<div class="flex flex-col items-center">
+<span class="text-2xl font-light text-white">72%</span>
+<span class="text-[8px] font-mono text-white/40 uppercase tracking-[0.2em]">Verified</span>
+</div>
+</div>
+<div class="absolute right-0 space-y-3">
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-primary glow-cyan"></div>
+<span class="text-[10px] text-white/60">Digital</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-electric-gold glow-gold"></div>
+<span class="text-[10px] text-white/60">Physical</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-white/20"></div>
+<span class="text-[10px] text-white/60">Testimony</span>
+</div>
+</div>
+</div>
+</div>
+<div class="glass-panel rounded-3xl p-8 flex flex-col relative overflow-hidden">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-sm font-medium text-white/90">Avg Resolution Time</h3>
+<p class="text-[10px] font-mono text-white/40 uppercase tracking-widest mt-1">Rolling 6-Month Period</p>
+</div>
+<span class="material-symbols-outlined text-primary">show_chart</span>
+</div>
+<div class="flex-1 relative mt-4">
+<svg class="w-full h-full overflow-visible" viewBox="0 0 400 160">
+<path d="M0,140 Q40,130 80,100 T160,80 T240,110 T320,50 T400,30" fill="none" stroke="rgba(27, 201, 254, 0.4)" stroke-width="2"></path>
+<path class="drop-shadow-[0_0_8px_rgba(27,201,254,0.6)]" d="M0,140 Q40,130 80,100 T160,80 T240,110 T320,50 T400,30" fill="none" stroke="#1bc9fe" stroke-width="2"></path>
+<circle class="glow-cyan" cx="320" cy="50" fill="#1bc9fe" r="4"></circle>
+<line stroke="white" stroke-dasharray="4" stroke-opacity="0.05" x1="0" x2="400" y1="140" y2="140"></line>
+<line stroke="white" stroke-dasharray="4" stroke-opacity="0.05" x1="0" x2="400" y1="90" y2="90"></line>
+<line stroke="white" stroke-dasharray="4" stroke-opacity="0.05" x1="0" x2="400" y1="40" y2="40"></line>
+</svg>
+<div class="flex justify-between mt-4">
+<span class="text-[9px] font-mono text-white/30">JAN</span>
+<span class="text-[9px] font-mono text-white/30">MAR</span>
+<span class="text-[9px] font-mono text-white/30">MAY</span>
+<span class="text-[9px] font-mono text-white/30">JUL</span>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+<span class="text-[10px] text-white/60">Current Efficiency</span>
+<span class="text-xs font-mono text-primary">+14.2%</span>
+</div>
+</div>
+<div class="glass-panel rounded-3xl p-8 flex flex-col relative overflow-hidden">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-sm font-medium text-white/90">Critical Risk Vectors</h3>
+<p class="text-[10px] font-mono text-white/40 uppercase tracking-widest mt-1">Live Threat Assessment</p>
+</div>
+<span class="material-symbols-outlined text-electric-gold">security</span>
+</div>
+<div class="space-y-6 flex-1 flex flex-col justify-center">
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono tracking-wider">
+<span class="text-white/60 uppercase">Statute Compliance</span>
+<span class="text-electric-gold">98.2%</span>
+</div>
+<div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-electric-gold w-[98.2%] glow-gold"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono tracking-wider">
+<span class="text-white/60 uppercase">Discovery Integrity</span>
+<span class="text-primary">84.5%</span>
+</div>
+<div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[84.5%] glow-cyan"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono tracking-wider">
+<span class="text-white/60 uppercase">Witness Credibility</span>
+<span class="text-white/80">61.0%</span>
+</div>
+<div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-white/20 w-[61%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute bottom-12 right-12 w-80 glass-panel rounded-2xl p-5 z-20">
+<div class="flex items-center gap-3 mb-3">
+<div class="size-8 rounded bg-primary/10 flex items-center justify-center border border-primary/20">
+<span class="material-symbols-outlined text-primary text-sm">auto_awesome</span>
+</div>
+<div>
+<h4 class="text-xs font-semibold text-white">Analytics Insight</h4>
+<span class="text-[9px] text-white/40 uppercase tracking-wide">AI Recommendation</span>
+</div>
+</div>
+<p class="font-mono text-[10px] leading-relaxed text-white/70 tracking-wide">
+                Resolution times in Cluster B have decreased by 18% following the implementation of Automated Discovery Synthesis.
+            </p>
+<button class="w-full mt-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg text-[10px] font-mono uppercase text-primary tracking-widest transition-all">
+                Export Executive Summary
+            </button>
+</div>
+</main>
+</div>
+
+</body></html>

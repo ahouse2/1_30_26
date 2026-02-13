@@ -5,11 +5,18 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from ..config import Settings, get_settings
 from ..models.api import (
+    AgentsPolicySettingsSnapshotModel,
+    AgentsPolicySettingsUpdate,
     AppearanceSettingsSnapshotModel,
     AppearanceSettingsUpdate,
     CredentialSettingsUpdate,
     CredentialStatusModel,
     CredentialsSnapshotModel,
+    GraphRefinementSettingsSnapshotModel,
+    GraphRefinementSettingsUpdate,
+    ModuleCatalogEntryModel,
+    ModuleModelOverrideModel,
+    ModuleModelOverrideUpdateModel,
     ModelCatalogResponse,
     ProviderCatalogEntryModel,
     ProviderModelInfoModel,
@@ -56,6 +63,10 @@ class SettingsService:
             self._apply_credential_update(state, payload.credentials)
         if payload.appearance:
             self._apply_appearance_update(state, payload.appearance)
+        if payload.agents_policy:
+            self._apply_agents_policy_update(state, payload.agents_policy)
+        if payload.graph_refinement:
+            self._apply_graph_refinement_update(state, payload.graph_refinement)
 
         state["updated_at"] = datetime.now(timezone.utc).isoformat()
         self._store.save(state)
@@ -122,12 +133,16 @@ class SettingsService:
         credentials = state.setdefault("credentials", {})
         credentials.setdefault("provider_api_keys", {})
         state.setdefault("appearance", {})
+        state.setdefault("agents_policy", {})
+        state.setdefault("graph_refinement", {})
         return state
 
     def _build_response(self, state: Dict[str, Any]) -> SettingsResponse:
         providers_state: Dict[str, Any] = state.get("providers", {})
         credentials_state: Dict[str, Any] = state.get("credentials", {})
         appearance_state: Dict[str, Any] = state.get("appearance", {})
+        policy_state: Dict[str, Any] = state.get("agents_policy", {})
+        graph_state: Dict[str, Any] = state.get("graph_refinement", {})
 
         primary = providers_state.get("primary") or self._runtime_settings.model_providers_primary
         secondary = (
@@ -149,12 +164,70 @@ class SettingsService:
             "pacer": bool(_normalise_secret(credentials_state.get("pacer_api_key"))),
             "unicourt": bool(_normalise_secret(credentials_state.get("unicourt_api_key"))),
             "lacs": bool(_normalise_secret(credentials_state.get("lacs_api_key"))),
+            "leginfo": bool(getattr(self._runtime_settings, "leginfo_endpoint", "")),
             "caselaw": bool(_normalise_secret(credentials_state.get("caselaw_api_key"))),
             "research_browser": bool(_normalise_secret(credentials_state.get("research_browser_api_key"))),
         }
 
         theme = appearance_state.get("theme") or "system"
         updated_at = _parse_timestamp(state.get("updated_at"))
+        agents_policy = AgentsPolicySettingsSnapshotModel(
+            enabled=bool(policy_state.get("enabled", self._runtime_settings.agents_policy_enabled)),
+            initial_trust=float(
+                policy_state.get("initial_trust", self._runtime_settings.agents_policy_initial_trust)
+            ),
+            trust_threshold=float(
+                policy_state.get(
+                    "trust_threshold", self._runtime_settings.agents_policy_trust_threshold
+                )
+            ),
+            decay=float(policy_state.get("decay", self._runtime_settings.agents_policy_decay)),
+            success_reward=float(
+                policy_state.get(
+                    "success_reward", self._runtime_settings.agents_policy_success_reward
+                )
+            ),
+            failure_penalty=float(
+                policy_state.get(
+                    "failure_penalty", self._runtime_settings.agents_policy_failure_penalty
+                )
+            ),
+            exploration_probability=float(
+                policy_state.get(
+                    "exploration_probability",
+                    self._runtime_settings.agents_policy_exploration_probability,
+                )
+            ),
+            seed=policy_state.get("seed", self._runtime_settings.agents_policy_seed),
+            observable_roles=list(
+                policy_state.get(
+                    "observable_roles",
+                    list(self._runtime_settings.agents_policy_observable_roles),
+                )
+            ),
+            suppressible_roles=list(
+                policy_state.get(
+                    "suppressible_roles",
+                    list(self._runtime_settings.agents_policy_suppressible_roles),
+                )
+            ),
+        )
+        graph_refinement = GraphRefinementSettingsSnapshotModel(
+            enabled=bool(graph_state.get("enabled", self._runtime_settings.graph_refinement_enabled)),
+            interval_seconds=float(
+                graph_state.get(
+                    "interval_seconds", self._runtime_settings.graph_refinement_interval_seconds
+                )
+            ),
+            idle_limit=int(
+                graph_state.get("idle_limit", self._runtime_settings.graph_refinement_idle_limit)
+            ),
+            min_new_edges=int(
+                graph_state.get(
+                    "min_new_edges", self._runtime_settings.graph_refinement_min_new_edges
+                )
+            ),
+        )
 
         refresh_service = get_provider_model_refresh_service()
         return SettingsResponse(
@@ -168,12 +241,18 @@ class SettingsService:
                     api_base_urls=api_base_urls,
                     refresh_service=refresh_service,
                 ),
+                module_overrides=self._compose_module_overrides(
+                    providers_state.get("module_overrides", {})
+                ),
             ),
             credentials=CredentialsSnapshotModel(
                 providers=provider_status,
                 services=services_status,
             ),
             appearance=AppearanceSettingsSnapshotModel(theme=theme),
+            agents_policy=agents_policy,
+            graph_refinement=graph_refinement,
+            module_catalog=self._build_module_catalog(),
             updated_at=updated_at,
         )
 
@@ -226,6 +305,39 @@ class SettingsService:
                 else:
                     overrides.pop(provider_id, None)
 
+        if update.module_overrides is not None:
+            overrides = providers.setdefault("module_overrides", {})
+            api_base_urls = self._compose_api_base_urls(providers.get("api_base_urls", {}))
+            for module_id, payload in update.module_overrides.items():
+                if payload is None:
+                    overrides.pop(module_id, None)
+                    continue
+                if payload.provider_id:
+                    self._ensure_provider_exists(payload.provider_id)
+                for model_id in (
+                    payload.chat_model,
+                    payload.embedding_model,
+                    payload.vision_model,
+                ):
+                    if model_id:
+                        self._ensure_model_exists(model_id, api_base_urls=api_base_urls)
+                if not any(
+                    [
+                        payload.provider_id,
+                        payload.chat_model,
+                        payload.embedding_model,
+                        payload.vision_model,
+                    ]
+                ):
+                    overrides.pop(module_id, None)
+                else:
+                    overrides[module_id] = {
+                        "provider_id": payload.provider_id,
+                        "chat_model": payload.chat_model,
+                        "embedding_model": payload.embedding_model,
+                        "vision_model": payload.vision_model,
+                    }
+
     def _apply_credential_update(self, state: Dict[str, Any], update: CredentialSettingsUpdate) -> None:
         credentials = state.setdefault("credentials", {})
         provider_keys = credentials.setdefault("provider_api_keys", {})
@@ -254,6 +366,9 @@ class SettingsService:
         if "caselaw_api_key" in update.model_fields_set:
             credentials["caselaw_api_key"] = _normalise_secret(update.caselaw_api_key)
 
+        if "leginfo_api_key" in update.model_fields_set:
+            credentials["leginfo_api_key"] = _normalise_secret(update.leginfo_api_key)
+
         if "research_browser_api_key" in update.model_fields_set:
             credentials["research_browser_api_key"] = _normalise_secret(update.research_browser_api_key)
 
@@ -264,6 +379,36 @@ class SettingsService:
             if theme not in {"system", "light", "dark"}:
                 raise SettingsValidationError(f"Unsupported theme '{theme}'")
             appearance["theme"] = theme
+
+    def _apply_agents_policy_update(self, state: Dict[str, Any], update: AgentsPolicySettingsUpdate) -> None:
+        policy = state.setdefault("agents_policy", {})
+        for field in (
+            "enabled",
+            "initial_trust",
+            "trust_threshold",
+            "decay",
+            "success_reward",
+            "failure_penalty",
+            "exploration_probability",
+            "seed",
+            "observable_roles",
+            "suppressible_roles",
+        ):
+            if field in update.model_fields_set:
+                policy[field] = getattr(update, field)
+
+    def _apply_graph_refinement_update(
+        self, state: Dict[str, Any], update: GraphRefinementSettingsUpdate
+    ) -> None:
+        graph = state.setdefault("graph_refinement", {})
+        for field in (
+            "enabled",
+            "interval_seconds",
+            "idle_limit",
+            "min_new_edges",
+        ):
+            if field in update.model_fields_set:
+                graph[field] = getattr(update, field)
 
     def _compose_defaults(self, stored: Dict[str, str]) -> Dict[str, str]:
         defaults = {
@@ -294,6 +439,63 @@ class SettingsService:
             else:
                 combined.pop(provider_id, None)
         return combined
+
+    def _compose_module_overrides(
+        self, raw: Dict[str, Any]
+    ) -> Dict[str, ModuleModelOverrideModel]:
+        overrides: Dict[str, ModuleModelOverrideModel] = {}
+        for module_id, payload in raw.items():
+            if not isinstance(payload, dict):
+                continue
+            overrides[module_id] = ModuleModelOverrideModel(
+                provider_id=payload.get("provider_id"),
+                chat_model=payload.get("chat_model"),
+                embedding_model=payload.get("embedding_model"),
+                vision_model=payload.get("vision_model"),
+            )
+        return overrides
+
+    def _build_module_catalog(self) -> List[ModuleCatalogEntryModel]:
+        core_modules = [
+            ("ingestion", "Ingestion"),
+            ("forensics", "Forensics"),
+            ("graph", "Graph"),
+            ("timeline", "Timeline"),
+            ("research", "Research"),
+            ("strategy", "Strategy"),
+            ("drafting", "Drafting"),
+            ("presentation", "Presentation"),
+            ("voice", "Voice"),
+            ("qa", "QA"),
+            ("centcom", "CENTCOM"),
+        ]
+        catalog = [
+            ModuleCatalogEntryModel(module_id=module_id, label=label, source="core")
+            for module_id, label in core_modules
+        ]
+        try:
+            import pkgutil
+            from pathlib import Path
+            from backend.app.agents import teams as teams_pkg
+
+            teams_path = Path(teams_pkg.__file__).parent
+            for module in pkgutil.iter_modules([str(teams_path)]):
+                name = module.name
+                if name.startswith("_") or name in {"__init__"}:
+                    continue
+                if any(entry.module_id == name for entry in catalog):
+                    continue
+                label = name.replace("_", " ").title()
+                catalog.append(
+                    ModuleCatalogEntryModel(
+                        module_id=name,
+                        label=label,
+                        source="team",
+                    )
+                )
+        except Exception:
+            pass
+        return catalog
 
     def _build_catalog(
         self,
@@ -381,8 +583,10 @@ class SettingsService:
 
     def _invalidate_caches(self) -> None:
         from .. import reset_provider_registry_cache
+        from ..config import reset_settings_cache
 
         reset_provider_registry_cache()
+        reset_settings_cache()
 
 
 def get_settings_service() -> SettingsService:

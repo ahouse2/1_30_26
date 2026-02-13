@@ -43,6 +43,22 @@ try:  # Optional Swarms dependency
 except Exception:  # pragma: no cover - Swarms optional in local/dev
     SwarmsAgent = None  # type: ignore
 
+_TEAM_KEYWORDS = {
+    "drafting": ("draft", "motion", "brief", "pleading", "declaration"),
+    "deposition": ("deposition", "depo", "witness outline", "examination"),
+    "subpoena": ("subpoena", "duces tecum", "records request"),
+    "discovery": ("discovery", "production", "interrogatory", "request for production", "rfa"),
+    "trial_prep": ("trial prep", "pretrial", "hearing", "voir dire"),
+}
+
+
+def select_team_key(question: str) -> str | None:
+    question_lower = question.lower()
+    for key, terms in _TEAM_KEYWORDS.items():
+        if any(term in question_lower for term in terms):
+            return key
+    return None
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -455,13 +471,13 @@ class SwarmsSession:
         )
 
 
-from backend.app.agents.teams.document_ingestion import build_document_ingestion_team
-from backend.app.agents.teams.forensic_analysis import build_forensic_analysis_team
-from backend.app.agents.teams.legal_research import build_legal_research_team
-from backend.app.agents.teams.litigation_support import build_litigation_support_team
-from backend.app.agents.teams.software_development import build_software_development_team
-from backend.app.agents.teams.ai_qa_oversight import build_ai_qa_oversight_committee
-from backend.app.agents.swarms_orchestrator import SwarmsOrchestrator
+from backend.app.agents.teams.legacy_teams import (
+    build_drafting_team,
+    build_deposition_team,
+    build_discovery_team,
+    build_subpoena_team,
+    build_trial_prep_team,
+)
 from backend.app.agents.orchestrator import AgentsOrchestrator
 from backend.ingestion.settings import LlmConfig
 
@@ -475,6 +491,11 @@ class SwarmsOrchestrator:
     forensics_tool: ForensicsTool
     qa_tool: QATool
     echo_tool: EchoTool
+    drafting_tool: AgentTool
+    deposition_tool: AgentTool
+    subpoena_tool: AgentTool
+    discovery_tool: AgentTool
+    trial_prep_tool: AgentTool
     memory_store: AgentMemoryStore
     qa_agent: QAAgent | None = None
     max_rounds: int = 12
@@ -482,12 +503,12 @@ class SwarmsOrchestrator:
     agents: Dict[str, SwarmsToolAgent] = field(init=False)
     graph: SessionGraph = field(init=False)
     base_definitions: List[AgentDefinition] = field(init=False, repr=False)
-    forensics_team: List[AgentDefinition] = field(init=False, repr=False)
-    dev_team: List[AgentDefinition] = field(init=False, repr=False)
-    document_ingestion_team: List[AgentDefinition] = field(init=False, repr=False)
-    legal_research_team: List[AgentDefinition] = field(init=False, repr=False)
-    litigation_support_team: List[AgentDefinition] = field(init=False, repr=False)
-    ai_qa_oversight_committee: List[AgentDefinition] = field(init=False, repr=False)
+    drafting_team: List[AgentDefinition] = field(init=False, repr=False)
+    deposition_team: List[AgentDefinition] = field(init=False, repr=False)
+    subpoena_team: List[AgentDefinition] = field(init=False, repr=False)
+    discovery_team: List[AgentDefinition] = field(init=False, repr=False)
+    trial_prep_team: List[AgentDefinition] = field(init=False, repr=False)
+    team_graphs: Dict[str, SessionGraph] = field(init=False, repr=False)
 
 
     def __post_init__(self) -> None:
@@ -499,30 +520,40 @@ class SwarmsOrchestrator:
             "qa": self.qa_tool,
             "echo": self.echo_tool,
             "forensics": self.forensics_tool,
+            "drafting": self.drafting_tool,
+            "deposition": self.deposition_tool,
+            "subpoena": self.subpoena_tool,
+            "discovery": self.discovery_tool,
+            "trial_prep": self.trial_prep_tool,
             # Add all new tools here as they are instantiated in get_orchestrator
         }
         self.base_definitions = build_agent_graph(self.tools)
-        self.forensics_team = build_forensic_analysis_team(list(self.tools.values())) # Pass all available tools
-        self.dev_team = build_software_development_team(list(self.tools.values())) # Pass all available tools
-        self.document_ingestion_team = build_document_ingestion_team(list(self.tools.values()))
-        self.legal_research_team = build_legal_research_team(list(self.tools.values()))
-        self.litigation_support_team = build_litigation_support_team(list(self.tools.values()))
-        self.ai_qa_oversight_committee = build_ai_qa_oversight_committee(list(self.tools.values()))
+        self.drafting_team = build_drafting_team(self.drafting_tool, self.qa_tool)
+        self.deposition_team = build_deposition_team(self.deposition_tool, self.qa_tool)
+        self.subpoena_team = build_subpoena_team(self.subpoena_tool, self.qa_tool)
+        self.discovery_team = build_discovery_team(self.discovery_tool, self.qa_tool)
+        self.trial_prep_team = build_trial_prep_team(self.trial_prep_tool, self.qa_tool)
 
         all_definitions = (
             self.base_definitions
-            + self.forensics_team
-            + self.dev_team
-            + self.document_ingestion_team
-            + self.legal_research_team
-            + self.litigation_support_team
-            + self.ai_qa_oversight_committee
+            + self.drafting_team
+            + self.deposition_team
+            + self.subpoena_team
+            + self.discovery_team
+            + self.trial_prep_team
         )
         self.graph = SessionGraph.from_definitions(all_definitions)
         self.agents = {
             node.definition.name: node.agent
             for node in self.graph.nodes.values()
             if node.agent is not None
+        }
+        self.team_graphs = {
+            "drafting": SessionGraph.from_definitions(self.drafting_team),
+            "deposition": SessionGraph.from_definitions(self.deposition_team),
+            "subpoena": SessionGraph.from_definitions(self.subpoena_team),
+            "discovery": SessionGraph.from_definitions(self.discovery_team),
+            "trial_prep": SessionGraph.from_definitions(self.trial_prep_team),
         }
 
     def run(
@@ -583,7 +614,7 @@ class SwarmsOrchestrator:
     def get_session(self, session_id: str) -> "SwarmsSessionHandle":
         return SwarmsSessionHandle(orchestrator=self, session_id=session_id)
 
-    def invoke_agent(self, *, session_id: str, agent_name: str, prompt: str) -> ToolInvocation:
+    def invoke_agent(self, *, session_id: str, agent_name: str, prompt: str) -> str:
         agent = self.agents.get(agent_name)
         if agent is None:
             raise ValueError(f"Agent '{agent_name}' not found.")
@@ -603,28 +634,16 @@ class SwarmsOrchestrator:
             memory=memory,
             telemetry={},
         )
-        return agent.run(context)
+        invocation = agent.run(context)
+        return invocation.message
 
     def _select_team_graph(self, question: str) -> Optional[SessionGraph]:
         """
         Selects the appropriate team graph based on keywords in the question.
         """
-        question_lower = question.lower()
-        
-        if "forensic" in question_lower or "authenticity" in question_lower or "crypto" in question_lower or "financial analysis" in question_lower:
-            return SessionGraph.from_definitions(self.forensics_team)
-        elif "research" in question_lower or "case law" in question_lower or "statute" in question_lower or "regulation" in question_lower:
-            return SessionGraph.from_definitions(self.legal_research_team)
-        elif "ingestion" in question_lower or "document processing" in question_lower or "knowledge graph" in question_lower:
-            return SessionGraph.from_definitions(self.document_ingestion_team)
-        elif "litigation" in question_lower or "strategy" in question_lower or "motion" in question_lower or "case theory" in question_lower:
-            return SessionGraph.from_definitions(self.litigation_support_team)
-        elif "develop" in question_lower or "code" in question_lower or "bug" in question_lower or "feature" in question_lower:
-            return SessionGraph.from_definitions(self.dev_team)
-        elif "qa" in question_lower or "oversight" in question_lower or "audit" in question_lower or "testing" in question_lower:
-            return SessionGraph.from_definitions(self.ai_qa_oversight_committee)
-        
-        # Default to base definitions if no specific team is matched
+        team_key = select_team_key(question)
+        if team_key and team_key in self.team_graphs:
+            return self.team_graphs[team_key]
         return SessionGraph.from_definitions(self.base_definitions)
 
     def _build_session_graph(self, policy_state: Dict[str, Any] | None) -> SessionGraph:
@@ -671,7 +690,7 @@ class SwarmsSessionHandle:
     orchestrator: SwarmsOrchestrator
     session_id: str
 
-    async def invoke(self, *, agent_name: str, prompt: str) -> ToolInvocation:
+    async def invoke(self, *, agent_name: str, prompt: str) -> str:
         return self.orchestrator.invoke_agent(
             session_id=self.session_id,
             agent_name=agent_name,
@@ -695,6 +714,13 @@ from backend.app.agents.tools.presentation_tools import (
     TimelineTool,
     ExhibitManagerTool,
     PresentationStateTool
+)
+from backend.app.agents.tools.legacy_workflows import (
+    DraftingTool,
+    DepositionPrepTool,
+    SubpoenaPrepTool,
+    DiscoveryProductionTool,
+    TrialPreparationTool,
 )
 from backend.app.agents.teams.document_ingestion import DocumentPreprocessingTool, ContentIndexingTool, KnowledgeGraphBuilderTool, DatabaseQueryTool, DocumentSummaryTool
 from backend.app.agents.teams.litigation_support import KnowledgeGraphQueryTool, LLMDraftingTool, SimulationTool
@@ -739,6 +765,12 @@ def get_orchestrator(
     critic_qa_tool = CriticQATool()
     refinement_qa_tool = RefinementQATool()
 
+    drafting_tool = DraftingTool()
+    deposition_tool = DepositionPrepTool()
+    subpoena_tool = SubpoenaPrepTool()
+    discovery_tool = DiscoveryProductionTool()
+    trial_prep_tool = TrialPreparationTool()
+
 
     return SwarmsOrchestrator(
         strategy_tool=StrategyTool(graph_agent=graph_agent),
@@ -749,5 +781,10 @@ def get_orchestrator(
         ),
         qa_tool=QATool(qa_agent=qa_agent),
         echo_tool=EchoTool(llm_service=llm_service),
+        drafting_tool=drafting_tool,
+        deposition_tool=deposition_tool,
+        subpoena_tool=subpoena_tool,
+        discovery_tool=discovery_tool,
+        trial_prep_tool=trial_prep_tool,
         memory_store=memory_store,
     )

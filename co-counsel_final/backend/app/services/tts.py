@@ -9,6 +9,74 @@ from uuid import uuid4
 import httpx
 
 from ..config import get_settings
+from .voice.adapters import CoquiSynthesizer
+
+
+class LocalTextToSpeechService:
+    """Local Coqui-based TTS fallback for more natural voices."""
+
+    def __init__(self, *, cache_dir: Path, settings):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.settings = settings
+        self._synthesizer = CoquiSynthesizer(
+            model_id=settings.voice_tts_model,
+            cache_dir=settings.voice_cache_dir,
+            device_preference=settings.voice_device_preference,
+            default_sample_rate=settings.voice_sample_rate,
+        )
+
+    def _resolve_speaker(self, voice: Optional[str]) -> Optional[str]:
+        if not voice:
+            voice = self.settings.tts_default_voice
+        if not voice:
+            return None
+        personas = self.settings.voice_personas or {}
+        if voice in personas:
+            return personas[voice].get("speaker_id")
+        for payload in personas.values():
+            if payload.get("label", "").lower() == str(voice).lower():
+                return payload.get("speaker_id")
+        return voice
+
+    def synthesise(self, *, text: str, voice: Optional[str] = None) -> TextToSpeechResult:
+        if not text.strip():
+            raise WorkflowAbort(
+                WorkflowError(
+                    component=WorkflowComponent.TTS,
+                    code="TTS_EMPTY_INPUT",
+                    message="Cannot synthesise empty text",
+                )
+            )
+        resolved_voice = self._resolve_speaker(voice)
+        cache_key = hashlib.sha256(f"local:{resolved_voice}:{text}".encode("utf-8")).hexdigest()
+        cache_path = self.cache_dir / f"{cache_key}.wav"
+        if cache_path.exists():
+            audio = cache_path.read_bytes()
+            return TextToSpeechResult(
+                voice=resolved_voice or "default",
+                content_type="audio/wav",
+                audio_bytes=audio,
+                sha256=cache_key,
+                cache_hit=True,
+            )
+        audio_bytes = self._synthesizer.synthesize(
+            text=text,
+            speaker_id=resolved_voice,
+            speed=1.0,
+            sample_rate=self.settings.voice_sample_rate,
+        )
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = cache_path.with_name(f".{cache_path.name}.{uuid4().hex}.tmp")
+        temp_path.write_bytes(audio_bytes)
+        temp_path.replace(cache_path)
+        return TextToSpeechResult(
+            voice=resolved_voice or "default",
+            content_type="audio/wav",
+            audio_bytes=audio_bytes,
+            sha256=cache_key,
+            cache_hit=False,
+        )
 from .errors import WorkflowAbort, WorkflowComponent, WorkflowError, WorkflowSeverity
 
 
@@ -41,7 +109,7 @@ class TextToSpeechService:
                     message="Cannot synthesise empty text",
                 )
             )
-        resolved_voice = voice or settings.tts_default_voice
+        resolved_voice = voice or settings.tts_default_voice or "en-us/mary_ann-glow_tts"
         voice_name = self._normalise_voice(resolved_voice)
         cache_key = hashlib.sha256(f"{voice_name}:{text}".encode("utf-8")).hexdigest()
         cache_path = self.cache_dir / f"{cache_key}.wav"
@@ -54,10 +122,14 @@ class TextToSpeechService:
                 sha256=cache_key,
                 cache_hit=True,
             )
-        payload = {"text": text, "voice": voice_name}
         headers = {"accept": "audio/wav"}
         try:
-            response = self._client.post("/api/tts", json=payload, headers=headers)
+            # Larynx HTTP API expects query params for text/voice and returns wav bytes.
+            response = self._client.get(
+                "/api/tts",
+                params={"text": text, "voice": voice_name},
+                headers=headers,
+            )
         except httpx.HTTPError as exc:  # pragma: no cover - network failures are rare in tests
             raise WorkflowAbort(
                 WorkflowError(
@@ -92,10 +164,15 @@ class TextToSpeechService:
             cache_hit=False,
         )
 
-    def _normalise_voice(self, voice: str) -> str:
+    def _normalise_voice(self, voice: Optional[str]) -> str:
+        if not voice:
+            return "en-us/mary_ann-glow_tts"
         if ":" in voice:
             _, voice_name = voice.split(":", 1)
-            return voice_name
+            voice = voice_name
+        # Larynx expects voices like "en-us/mary_ann-glow_tts".
+        if "/" not in voice:
+            return "en-us/mary_ann-glow_tts"
         return voice
 
 
@@ -107,14 +184,27 @@ def get_tts_service(*, optional: bool = False) -> TextToSpeechService | None:
     settings = get_settings()
     enabled = getattr(settings, "tts_enabled", True)
     base_url = getattr(settings, "tts_service_url", None)
-    if not enabled or not base_url:
+    backend = str(getattr(settings, "tts_backend", "auto") or "auto").lower()
+    if not enabled:
         if optional:
             return None
-        raise RuntimeError("TTS service is not configured")
+        raise RuntimeError("TTS service is disabled")
+
     if _tts_service is None:
-        timeout = float(getattr(settings, "tts_timeout_seconds", 15.0))
         cache_dir = getattr(settings, "tts_cache_dir", Path("storage/audio_cache"))
-        _tts_service = TextToSpeechService(str(base_url), Path(cache_dir), timeout=timeout)
+        if backend in {"local", "coqui"} or not base_url or (backend == "auto" and not base_url):
+            _tts_service = LocalTextToSpeechService(cache_dir=Path(cache_dir), settings=settings)
+        elif backend in {"remote", "larynx", "http"} or backend == "auto":
+            if not base_url:
+                if optional:
+                    return None
+                raise RuntimeError("TTS service is not configured")
+            timeout = float(getattr(settings, "tts_timeout_seconds", 15.0))
+            _tts_service = TextToSpeechService(str(base_url), Path(cache_dir), timeout=timeout)
+        else:
+            if optional:
+                return None
+            raise RuntimeError(f"Unsupported TTS backend: {backend}")
     return _tts_service
 
 

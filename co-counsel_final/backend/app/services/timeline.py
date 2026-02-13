@@ -80,6 +80,8 @@ class TimelineService:
         from_ts: Optional[datetime] = None,
         to_ts: Optional[datetime] = None,
         entity: Optional[str] = None,
+        topic: Optional[str] = None,
+        source: Optional[str] = None,
         risk_band: Optional[str] = None,
         motion_due_before: Optional[datetime] = None,
         motion_due_after: Optional[datetime] = None,
@@ -111,6 +113,10 @@ class TimelineService:
         events = self._filter_by_time(events, from_ts, to_ts)
         if entity:
             events = self._filter_by_entity(events, entity)
+        if topic:
+            events = self._filter_by_topic(events, topic)
+        if source:
+            events = self._filter_by_source(events, source)
         if risk_band:
             events = self._filter_by_risk_band(events, risk_band)
         if motion_due_before or motion_due_after:
@@ -129,6 +135,8 @@ class TimelineService:
 
         attributes = {
             "entity_filter": bool(entity),
+            "topic_filter": bool(topic),
+            "source_filter": bool(source),
             "range_filter": bool(from_ts or to_ts),
             "risk_filter": bool(risk_band),
             "deadline_filter": bool(motion_due_before or motion_due_after),
@@ -150,6 +158,8 @@ class TimelineService:
         export_format: str,
         case_id: Optional[str] = None,
         entity: Optional[str] = None,
+        topic: Optional[str] = None,
+        source: Optional[str] = None,
         from_ts: Optional[datetime] = None,
         to_ts: Optional[datetime] = None,
         risk_band: Optional[str] = None,
@@ -159,6 +169,8 @@ class TimelineService:
     ) -> TimelineExportRecord:
         result = self.list_events(
             entity=entity,
+            topic=topic,
+            source=source,
             from_ts=from_ts,
             to_ts=to_ts,
             risk_band=risk_band,
@@ -207,6 +219,31 @@ class TimelineService:
                 }
             )
         return scenes
+
+    def build_media_hooks(self, events: List[TimelineEvent]) -> List[Dict[str, object]]:
+        hooks: List[Dict[str, object]] = []
+        for index, event in enumerate(events, start=1):
+            mode = "video" if index % 3 == 0 else "image"
+            hook_id = f"media-hook-{event.id}"
+            prompt = (
+                f"Create a {mode} exhibit for '{event.title}'. "
+                f"Context: {event.summary}. "
+                f"Use documentary legal style, high legibility overlays, and timestamp annotation."
+            )
+            hooks.append(
+                {
+                    "hook_id": hook_id,
+                    "event_id": event.id,
+                    "title": f"{event.title} ({mode})",
+                    "media_type": mode,
+                    "prompt": prompt,
+                    "status": "queued",
+                    "citations": list(event.citations),
+                    "provider": self.settings.default_vision_model,
+                    "model": self.settings.ingestion_vision_label_model or self.settings.default_vision_model,
+                }
+            )
+        return hooks
 
     @staticmethod
     def _render_markdown(
@@ -441,6 +478,54 @@ class TimelineService:
             return []
 
         return [event for event in events if any(citation in allowed_docs for citation in event.citations)]
+
+    @staticmethod
+    def _filter_by_topic(events: Iterable[TimelineEvent], topic: str) -> List[TimelineEvent]:
+        tokens = [entry.strip().lower() for entry in topic.split(",") if entry.strip()]
+        if not tokens:
+            return list(events)
+        filtered: List[TimelineEvent] = []
+        for event in events:
+            summary = f"{event.title} {event.summary}".lower()
+            if any(token in summary for token in tokens):
+                filtered.append(event)
+                continue
+            if any(
+                token in str(highlight.get("label", "")).lower()
+                or token in str(highlight.get("id", "")).lower()
+                for token in tokens
+                for highlight in event.entity_highlights
+            ):
+                filtered.append(event)
+                continue
+            if any(
+                token in str(relation.get("label", "")).lower()
+                or token in str(relation.get("type", "")).lower()
+                for token in tokens
+                for relation in event.relation_tags
+            ):
+                filtered.append(event)
+                continue
+        return filtered
+
+    @staticmethod
+    def _filter_by_source(events: Iterable[TimelineEvent], source: str) -> List[TimelineEvent]:
+        tokens = [entry.strip().lower() for entry in source.split(",") if entry.strip()]
+        if not tokens:
+            return list(events)
+        filtered: List[TimelineEvent] = []
+        for event in events:
+            summary = f"{event.title} {event.summary}".lower()
+            if any(token in summary for token in tokens):
+                filtered.append(event)
+                continue
+            if any(
+                token in str(citation).lower()
+                for token in tokens
+                for citation in event.citations
+            ):
+                filtered.append(event)
+        return filtered
 
     @staticmethod
     def _collect_citations(events: Iterable[TimelineEvent]) -> List[str]:

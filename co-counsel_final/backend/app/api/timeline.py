@@ -10,6 +10,8 @@ from ..models.api import (
     TimelineResponse,
     StoryboardResponseModel,
     StoryboardSceneModel,
+    TimelineMediaHookModel,
+    TimelineMediaHooksResponseModel,
 )
 from ..services.timeline import TimelineService, get_timeline_service
 from ..security.authz import Principal
@@ -28,6 +30,8 @@ def get_timeline(
     from_ts: str | None = Query(default=None),
     to_ts: str | None = Query(default=None),
     entity: str | None = Query(default=None),
+    topic: str | None = Query(default=None),
+    source: str | None = Query(default=None),
     risk_band: str | None = Query(default=None),
     motion_due_before: str | None = Query(default=None),
     motion_due_after: str | None = Query(default=None),
@@ -42,6 +46,8 @@ def get_timeline(
         from_ts=parse_dt(from_ts),
         to_ts=parse_dt(to_ts),
         entity=entity,
+        topic=topic,
+        source=source,
         risk_band=risk_band,
         motion_due_before=parse_dt(motion_due_before),
         motion_due_after=parse_dt(motion_due_after),
@@ -64,6 +70,8 @@ def export_timeline(
         export_format=payload.format,
         case_id=payload.case_id,
         entity=payload.entity,
+        topic=payload.topic,
+        source=payload.source,
         from_ts=payload.from_ts,
         to_ts=payload.to_ts,
         risk_band=payload.risk_band,
@@ -97,9 +105,18 @@ def get_timeline_storyboard(
     cursor: str | None = Query(default=None),
     limit: int = Query(50, ge=1, le=200),
     entity: str | None = Query(default=None),
+    topic: str | None = Query(default=None),
+    source: str | None = Query(default=None),
     risk_band: str | None = Query(default=None),
 ) -> StoryboardResponseModel:
-    result = service.list_events(cursor=cursor, limit=limit, entity=entity, risk_band=risk_band)
+    result = service.list_events(
+        cursor=cursor,
+        limit=limit,
+        entity=entity,
+        topic=topic,
+        source=source,
+        risk_band=risk_band,
+    )
     scenes = [
         StoryboardSceneModel(
             id=scene["id"],
@@ -113,4 +130,30 @@ def get_timeline_storyboard(
     return StoryboardResponseModel(
         generated_at=datetime.utcnow().isoformat(),
         scenes=scenes,
+    )
+
+
+@router.get("/timeline/media-hooks", response_model=TimelineMediaHooksResponseModel)
+def get_timeline_media_hooks(
+    _principal: Principal = Depends(authorize_timeline),
+    service: TimelineService = Depends(get_timeline_service),
+    cursor: str | None = Query(default=None),
+    limit: int = Query(30, ge=1, le=100),
+    entity: str | None = Query(default=None),
+    topic: str | None = Query(default=None),
+    source: str | None = Query(default=None),
+    risk_band: str | None = Query(default=None),
+) -> TimelineMediaHooksResponseModel:
+    result = service.list_events(
+        cursor=cursor,
+        limit=limit,
+        entity=entity,
+        topic=topic,
+        source=source,
+        risk_band=risk_band,
+    )
+    hooks = [TimelineMediaHookModel.model_validate(item) for item in service.build_media_hooks(result.events)]
+    return TimelineMediaHooksResponseModel(
+        generated_at=datetime.utcnow().isoformat(),
+        hooks=hooks,
     )

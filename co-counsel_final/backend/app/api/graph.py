@@ -1,12 +1,20 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..models.api import (
     GraphEdgeModel,
+    GraphFactExtractionResponse,
+    GraphFactModel,
     GraphNeighborResponse,
     GraphNodeModel,
     GraphSearchResponse,
+    GraphSnapshotCreateRequest,
+    GraphSnapshotDiffRequest,
+    GraphSnapshotDiffResponse,
+    GraphSnapshotListResponse,
+    GraphSnapshotRecordModel,
 )
 from ..services.graph import GraphService, get_graph_service
+from ..services.graph_snapshots import GraphSnapshotService, get_graph_snapshot_service
 from ..security.authz import Principal
 from ..security.dependencies import (
     authorize_graph_read,
@@ -66,3 +74,71 @@ def search_graph_nodes(
     return GraphSearchResponse(
         nodes=[GraphNodeModel(id=node.id, type=node.type, properties=dict(node.properties)) for node in nodes]
     )
+
+
+@router.get("/graph/facts", response_model=GraphFactExtractionResponse)
+def extract_graph_facts(
+    limit: int = Query(default=200, ge=1, le=2000),
+    case_id: str | None = None,
+    _principal: Principal = Depends(authorize_graph_read),
+    service: GraphService = Depends(get_graph_service),
+) -> GraphFactExtractionResponse:
+    extraction = service.extract_facts(case_id=case_id, limit=limit)
+    return GraphFactExtractionResponse(
+        generated_at=extraction.generated_at,
+        case_id=extraction.case_id,
+        total=extraction.total,
+        facts=[GraphFactModel(**fact.to_dict()) for fact in extraction.facts],
+    )
+
+
+@router.post("/graph/snapshots", response_model=GraphSnapshotRecordModel)
+def create_graph_snapshot(
+    payload: GraphSnapshotCreateRequest,
+    _principal: Principal = Depends(authorize_graph_read),
+    service: GraphSnapshotService = Depends(get_graph_snapshot_service),
+) -> GraphSnapshotRecordModel:
+    record = service.create_snapshot(case_id=payload.case_id, limit=payload.limit, notes=payload.notes)
+    return GraphSnapshotRecordModel(**record.to_dict())
+
+
+@router.get("/graph/snapshots", response_model=GraphSnapshotListResponse)
+def list_graph_snapshots(
+    case_id: str | None = None,
+    _principal: Principal = Depends(authorize_graph_read),
+    service: GraphSnapshotService = Depends(get_graph_snapshot_service),
+) -> GraphSnapshotListResponse:
+    records = service.list_snapshots(case_id=case_id)
+    return GraphSnapshotListResponse(
+        snapshots=[GraphSnapshotRecordModel(**record.to_dict()) for record in records]
+    )
+
+
+@router.get("/graph/snapshots/{snapshot_id}")
+def get_graph_snapshot(
+    snapshot_id: str,
+    _principal: Principal = Depends(authorize_graph_read),
+    service: GraphSnapshotService = Depends(get_graph_snapshot_service),
+) -> dict:
+    try:
+        return service.get_snapshot(snapshot_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Snapshot not found") from exc
+
+
+@router.post("/graph/snapshots/diff", response_model=GraphSnapshotDiffResponse)
+def diff_graph_snapshots(
+    payload: GraphSnapshotDiffRequest,
+    _principal: Principal = Depends(authorize_graph_read),
+    service: GraphSnapshotService = Depends(get_graph_snapshot_service),
+) -> GraphSnapshotDiffResponse:
+    try:
+        diff = service.diff_snapshots(
+            baseline_snapshot_id=payload.baseline_snapshot_id,
+            candidate_snapshot_id=payload.candidate_snapshot_id,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="One or more snapshots not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return GraphSnapshotDiffResponse(**diff)

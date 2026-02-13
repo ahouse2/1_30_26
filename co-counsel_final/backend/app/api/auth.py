@@ -3,8 +3,46 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+try:
+    from jose import JWTError, jwt
+except ImportError:
+    # Runtime fallback for environments that only ship PyJWT.
+    import jwt
+    JWTError = jwt.PyJWTError
+try:
+    from passlib.context import CryptContext
+except ImportError:
+    import hashlib
+    import hmac
+    import os
+
+    class CryptContext:  # type: ignore[override]
+        """Minimal fallback hasher for local/dev environments."""
+
+        def __init__(self, schemes=None, deprecated="auto"):
+            self._iterations = 120_000
+
+        def hash(self, password: str) -> str:
+            salt = os.urandom(16).hex()
+            digest = hashlib.pbkdf2_hmac(
+                "sha256", password.encode("utf-8"), salt.encode("utf-8"), self._iterations
+            ).hex()
+            return f"pbkdf2_sha256${self._iterations}${salt}${digest}"
+
+        def verify(self, plain_password: str, hashed_password: str) -> bool:
+            try:
+                algo, iter_s, salt, expected = hashed_password.split("$", 3)
+                if algo != "pbkdf2_sha256":
+                    return False
+                digest = hashlib.pbkdf2_hmac(
+                    "sha256",
+                    plain_password.encode("utf-8"),
+                    salt.encode("utf-8"),
+                    int(iter_s),
+                ).hex()
+                return hmac.compare_digest(digest, expected)
+            except Exception:
+                return False
 from sqlalchemy.orm import Session
 import uuid
 from collections import defaultdict
