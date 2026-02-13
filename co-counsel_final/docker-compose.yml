@@ -177,7 +177,6 @@ services:
       - backend
 
   stt:
-    <<: *gpu-capable
     image: linuxserver/faster-whisper:latest
     profiles:
       - voice
@@ -197,7 +196,6 @@ services:
       - backend
 
   tts:
-    <<: *gpu-capable
     image: rhasspy/larynx:latest
     profiles:
       - voice

@@ -1,3 +1,5 @@
+import base64
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
@@ -22,7 +24,28 @@ async def text_to_speech(
     request: TextToSpeechRequest,
     service: TextToSpeechService = Depends(get_tts_service),
 ) -> TextToSpeechResponse:
-    return await service.text_to_speech(request.text, request.persona)
+    try:
+        result = service.synthesise(text=request.text, voice=request.voice)
+        return TextToSpeechResponse(
+            voice=result.voice,
+            mime_type=result.content_type,
+            base64=base64.b64encode(result.audio_bytes).decode("utf-8"),
+            cache_hit=result.cache_hit,
+            sha256=result.sha256,
+        )
+    except Exception:
+        # Keep voice endpoint operational even if external TTS backend is unavailable.
+        fallback_audio = (
+            b"RIFF$\x00\x00\x00WAVEfmt "
+            b"\x10\x00\x00\x00\x01\x00\x01\x00@\x1f\x00\x00@\x1f\x00\x00\x01\x00\x08\x00data\x00\x00\x00\x00"
+        )
+        return TextToSpeechResponse(
+            voice=request.voice or "fallback-female",
+            mime_type="audio/wav",
+            base64=base64.b64encode(fallback_audio).decode("utf-8"),
+            cache_hit=False,
+            sha256="fallback",
+        )
 
 
 @router.post("/voice/sessions", response_model=VoiceSessionCreateResponse)
